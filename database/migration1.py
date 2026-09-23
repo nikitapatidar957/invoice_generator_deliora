@@ -1,38 +1,11 @@
-from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
-
-
-# --------------------------------------------------
-# Database Configuration
-# --------------------------------------------------
-
-import os
-import ssl
-import certifi
 
 from datetime import datetime, timezone
 
-from pymongo import MongoClient
-from dotenv import load_dotenv
-
-load_dotenv()
-
-uri = os.getenv("MONGODB_URI")
-
-client = MongoClient(
-    uri,
-    tls=True,
-    tlsCAFile=certifi.where(),
-    serverSelectionTimeoutMS=10000,
-)
+from database.mongodb import close_mongo_connection, get_mongo_database
 
 
-# --------------------------------------------------
-# Connect to MongoDB
-# --------------------------------------------------
-
-# client = MongoClient(MONGO_URI)
-db = client['deliora']
+db = get_mongo_database()
 
 
 # --------------------------------------------------
@@ -471,4 +444,4 @@ if __name__ == "__main__":
 
     migrate()
 
-    client.close()
+    close_mongo_connection()

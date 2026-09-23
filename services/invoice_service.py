@@ -1,50 +1,51 @@
 import re
-import sqlite3
 from datetime import datetime
 
+from pymongo import ReturnDocument
+from pymongo.errors import DuplicateKeyError
+
 from config import INVOICE_PREFIX
-from database.db import db_session
+from database.db import get_collection, get_database, next_id
 from services.calculation_service import calculate_invoice
 from services.number_to_words import amount_in_words
 
 GSTIN_RE = re.compile(r"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$")
 UPI_RE = re.compile(r"^[\w.\-]{2,256}@[a-zA-Z]{2,64}$")
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-
 PAYMENT_METHODS = {"cash", "upi", "bank", "card", "other"}
 
 
+def _document(document: dict | None) -> dict | None:
+    if not document:
+        return None
+    document.pop("_id", None)
+    return document
+
+
 def get_settings() -> dict:
-    with db_session() as conn:
-        rows = conn.execute("SELECT key, value FROM settings").fetchall()
+    rows = get_collection("settings").find({}, {"_id": 0, "key": 1, "value": 1})
     return {row["key"]: row["value"] for row in rows}
 
 
 def update_settings(values: dict) -> dict:
-    with db_session() as conn:
-        for key, value in values.items():
-            conn.execute(
-                "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-                (key, str(value)),
-            )
+    settings = get_collection("settings")
+    for key, value in values.items():
+        settings.update_one(
+            {"key": key},
+            {"$set": {"key": key, "value": str(value)}},
+            upsert=True,
+        )
     return get_settings()
 
 
 def list_products(active_only: bool = False) -> list[dict]:
-    sql = "SELECT * FROM products"
-    params = []
-    if active_only:
-        sql += " WHERE is_active = 1"
-    sql += " ORDER BY name"
-    with db_session() as conn:
-        rows = conn.execute(sql, params).fetchall()
-    return [dict(row) for row in rows]
+    query = {"is_active": 1} if active_only else {}
+    products = get_collection("products").find(query, {"_id": 0}).sort("name", 1)
+    return [_document(row) for row in products]
 
 
 def get_product(product_id: int) -> dict | None:
-    with db_session() as conn:
-        row = conn.execute("SELECT * FROM products WHERE id = ?", (product_id,)).fetchone()
-    return dict(row) if row else None
+    return _document(get_collection("products").find_one({"id": int(product_id)}, {"_id": 0}))
 
 
 def save_product(data: dict, product_id: int | None = None) -> dict:
@@ -65,107 +66,74 @@ def save_product(data: dict, product_id: int | None = None) -> dict:
         raise ValueError("Available quantity cannot be negative.")
 
     now = datetime.now().isoformat(timespec="seconds")
-    payload = (
-        name,
-        sku,
-        (data.get("size") or "").strip(),
-        price,
-        gst_rate,
-        (data.get("hsn_sac") or "").strip(),
-        qty,
-        1 if data.get("is_active", True) else 0,
-        now,
-    )
-
+    fields = {
+        "name": name,
+        "sku": sku,
+        "size": (data.get("size") or "").strip(),
+        "price": price,
+        "gst_rate": gst_rate,
+        "hsn_sac": (data.get("hsn_sac") or "").strip(),
+        "available_quantity": qty,
+        "is_active": 1 if data.get("is_active", True) else 0,
+        "updated_at": now,
+    }
+    products = get_collection("products")
     try:
-        with db_session() as conn:
-            if product_id:
-                conn.execute(
-                    """
-                    UPDATE products SET
-                        name = ?, sku = ?, size = ?, price = ?, gst_rate = ?,
-                        hsn_sac = ?, available_quantity = ?, is_active = ?, updated_at = ?
-                    WHERE id = ?
-                    """,
-                    (*payload, product_id),
-                )
-            else:
-                cur = conn.execute(
-                    """
-                    INSERT INTO products (
-                        name, sku, size, price, gst_rate, hsn_sac,
-                        available_quantity, is_active, created_at, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (*payload, now),
-                )
-                product_id = cur.lastrowid
-            row = conn.execute("SELECT * FROM products WHERE id = ?", (product_id,)).fetchone()
-    except sqlite3.IntegrityError as exc:
+        if product_id:
+            products.update_one({"id": int(product_id)}, {"$set": fields})
+        else:
+            product_id = next_id("products")
+            fields.update({"_id": product_id, "id": product_id, "created_at": now})
+            products.insert_one(fields)
+    except DuplicateKeyError as exc:
         raise ValueError("A product with this SKU already exists.") from exc
-    return dict(row)
+    return get_product(product_id)
 
 
 def deactivate_product(product_id: int) -> None:
-    with db_session() as conn:
-        conn.execute(
-            "UPDATE products SET is_active = 0, updated_at = ? WHERE id = ?",
-            (datetime.now().isoformat(timespec="seconds"), product_id),
-        )
+    get_collection("products").update_one(
+        {"id": int(product_id)},
+        {"$set": {"is_active": 0, "updated_at": datetime.now().isoformat(timespec="seconds")}},
+    )
+
+
+def _invoice_year(invoice_date: str | None) -> int:
+    return datetime.strptime(invoice_date, "%Y-%m-%d").year if invoice_date else datetime.now().year
 
 
 def peek_next_invoice_number(invoice_date: str | None = None) -> str:
     year = _invoice_year(invoice_date)
-    with db_session() as conn:
-        row = conn.execute(
-            "SELECT last_number FROM invoice_counters WHERE year = ?", (year,)
-        ).fetchone()
-    nxt = (row["last_number"] if row else 0) + 1
-    return f"{INVOICE_PREFIX}-{year}-{nxt:04d}"
+    counter = get_collection("invoice_counters").find_one({"_id": year})
+    last_number = counter.get("last_number", 0) if counter else 0
+    return f"{INVOICE_PREFIX}-{year}-{last_number + 1:04d}"
 
 
-def _invoice_year(invoice_date: str | None) -> int:
-    if invoice_date:
-        return datetime.strptime(invoice_date, "%Y-%m-%d").year
-    return datetime.now().year
-
-
-def _allocate_invoice_number(conn, year: int) -> str:
-    row = conn.execute(
-        "SELECT last_number FROM invoice_counters WHERE year = ?", (year,)
-    ).fetchone()
-    nxt = (row["last_number"] if row else 0) + 1
-    conn.execute(
-        """
-        INSERT INTO invoice_counters (year, last_number) VALUES (?, ?)
-        ON CONFLICT(year) DO UPDATE SET last_number = excluded.last_number
-        """,
-        (year, nxt),
+def _allocate_invoice_number(year: int, session=None) -> str:
+    counter = get_collection("invoice_counters").find_one_and_update(
+        {"_id": year},
+        {"$inc": {"last_number": 1}},
+        upsert=True,
+        return_document=ReturnDocument.AFTER,
+        session=session,
     )
-    return f"{INVOICE_PREFIX}-{year}-{nxt:04d}"
+    return f"{INVOICE_PREFIX}-{year}-{counter['last_number']:04d}"
 
 
 def validate_payload(payload: dict) -> None:
     customer_name = (payload.get("customer_name") or "").strip()
     if not customer_name:
         raise ValueError("Customer name is required.")
-
     gstin = (payload.get("customer_gstin") or "").strip().upper()
     if gstin and not GSTIN_RE.match(gstin):
         raise ValueError("Customer GSTIN format looks invalid. Leave it blank for a regular consumer.")
-
     email = (payload.get("customer_email") or "").strip()
     if email and not EMAIL_RE.match(email):
         raise ValueError("Customer email format looks invalid.")
-
-    tax_type = payload.get("tax_type")
-    if tax_type not in {"intra", "inter"}:
+    if payload.get("tax_type") not in {"intra", "inter"}:
         raise ValueError("Select Intra-State or Inter-State tax type.")
-
     method = (payload.get("payment_method") or "").lower()
     if method not in PAYMENT_METHODS:
         raise ValueError("Select a valid payment method.")
-
     upi = (payload.get("customer_upi_id") or "").strip()
     if method == "upi":
         if not upi:
@@ -174,7 +142,6 @@ def validate_payload(payload: dict) -> None:
             raise ValueError("UPI ID format looks invalid. Example: nikita@upi")
     else:
         payload["customer_upi_id"] = ""
-
     if method not in {"upi", "bank", "card"}:
         payload["transaction_reference"] = payload.get("transaction_reference") or ""
 
@@ -186,14 +153,10 @@ def create_invoice(payload: dict) -> dict:
         raise ValueError("Add at least one perfume.")
 
     product_ids = [int(item["product_id"]) for item in items_in]
-    with db_session() as conn:
-        placeholders = ",".join("?" * len(product_ids))
-        rows = conn.execute(
-            f"SELECT * FROM products WHERE id IN ({placeholders})",
-            product_ids,
-        ).fetchall()
-        products = {row["id"]: dict(row) for row in rows}
-
+    products = {
+        row["id"]: row
+        for row in get_collection("products").find({"id": {"$in": product_ids}}, {"_id": 0})
+    }
     enriched = []
     for item in items_in:
         product = products.get(int(item["product_id"]))
@@ -219,139 +182,95 @@ def create_invoice(payload: dict) -> dict:
         payload.get("payment_status"),
         payload.get("amount_paid") or 0,
     )
-    words = amount_in_words(totals["grand_total"])
     invoice_date = payload.get("invoice_date") or datetime.now().strftime("%Y-%m-%d")
-    year = _invoice_year(invoice_date)
     created_at = datetime.now().isoformat(timespec="seconds")
+    invoice_id = next_id("invoices")
+    invoice = {
+        "_id": invoice_id,
+        "id": invoice_id,
+        "invoice_number": None,
+        "invoice_date": invoice_date,
+        "customer_name": payload["customer_name"].strip(),
+        "customer_phone": (payload.get("customer_phone") or "").strip(),
+        "customer_email": (payload.get("customer_email") or "").strip(),
+        "customer_address": (payload.get("customer_address") or "").strip(),
+        "customer_gstin": (payload.get("customer_gstin") or "").strip().upper(),
+        "tax_type": payload["tax_type"],
+        "payment_method": payload["payment_method"].lower(),
+        "payment_status": totals["payment_status"],
+        "customer_upi_id": (payload.get("customer_upi_id") or "").strip(),
+        "transaction_reference": (payload.get("transaction_reference") or "").strip(),
+        "amount_paid": totals["amount_paid"],
+        "balance_due": totals["balance_due"],
+        "subtotal": totals["subtotal"],
+        "total_discount": totals["total_discount"],
+        "total_taxable": totals["total_taxable"],
+        "total_gst": totals["total_gst"],
+        "total_cgst": totals["total_cgst"],
+        "total_sgst": totals["total_sgst"],
+        "total_igst": totals["total_igst"],
+        "grand_total": totals["grand_total"],
+        "amount_in_words": amount_in_words(totals["grand_total"]),
+        "pdf_path": "",
+        "created_at": created_at,
+    }
 
-    with db_session() as conn:
-        invoice_number = _allocate_invoice_number(conn, year)
-        existing = conn.execute(
-            "SELECT id FROM invoices WHERE invoice_number = ?", (invoice_number,)
-        ).fetchone()
-        if existing:
-            raise ValueError("Duplicate invoice number generated. Please try saving again.")
-
-        cur = conn.execute(
-            """
-            INSERT INTO invoices (
-                invoice_number, invoice_date, customer_name, customer_phone,
-                customer_email, customer_address, customer_gstin, tax_type,
-                payment_method, payment_status, customer_upi_id, transaction_reference,
-                amount_paid, balance_due, subtotal, total_discount, total_taxable,
-                total_gst, total_cgst, total_sgst, total_igst, grand_total,
-                amount_in_words, pdf_path, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', ?)
-            """,
-            (
-                invoice_number,
-                invoice_date,
-                payload["customer_name"].strip(),
-                (payload.get("customer_phone") or "").strip(),
-                (payload.get("customer_email") or "").strip(),
-                (payload.get("customer_address") or "").strip(),
-                (payload.get("customer_gstin") or "").strip().upper(),
-                payload["tax_type"],
-                payload["payment_method"].lower(),
-                totals["payment_status"],
-                (payload.get("customer_upi_id") or "").strip(),
-                (payload.get("transaction_reference") or "").strip(),
-                totals["amount_paid"],
-                totals["balance_due"],
-                totals["subtotal"],
-                totals["total_discount"],
-                totals["total_taxable"],
-                totals["total_gst"],
-                totals["total_cgst"],
-                totals["total_sgst"],
-                totals["total_igst"],
-                totals["grand_total"],
-                words,
-                created_at,
-            ),
-        )
-        invoice_id = cur.lastrowid
-
-        for item in totals["items"]:
-            conn.execute(
-                """
-                INSERT INTO invoice_items (
-                    invoice_id, product_id, product_name, sku, hsn_sac, quantity,
-                    unit_price, discount_percent, discount_fixed, discount_amount,
-                    gst_rate, taxable_amount, gst_amount, cgst_amount, sgst_amount,
-                    igst_amount, line_total
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    invoice_id,
-                    item["product_id"],
-                    item["product_name"],
-                    item["sku"],
-                    item["hsn_sac"],
-                    item["quantity"],
-                    item["unit_price"],
-                    item["discount_percent"],
-                    item["discount_fixed"],
-                    item["discount_amount"],
-                    item["gst_rate"],
-                    item["taxable_amount"],
-                    item["gst_amount"],
-                    item["cgst_amount"],
-                    item["sgst_amount"],
-                    item["igst_amount"],
-                    item["line_total"],
-                ),
-            )
-            conn.execute(
-                """
-                UPDATE products
-                SET available_quantity = CASE
-                    WHEN available_quantity >= ? THEN available_quantity - ?
-                    ELSE 0
-                END,
-                updated_at = ?
-                WHERE id = ?
-                """,
-                (item["quantity"], item["quantity"], created_at, item["product_id"]),
-            )
-
+    database = get_database()
+    invoices = get_collection("invoices")
+    items_collection = get_collection("invoice_items")
+    with database.client.start_session() as session:
+        with session.start_transaction():
+            invoice["invoice_number"] = _allocate_invoice_number(_invoice_year(invoice_date), session)
+            invoices.insert_one(invoice, session=session)
+            for item in totals["items"]:
+                item_id = next_id("invoice_items", session)
+                items_collection.insert_one(
+                    {"_id": item_id, "id": item_id, "invoice_id": invoice_id, **item},
+                    session=session,
+                )
+                get_collection("products").update_one(
+                    {"id": item["product_id"]},
+                    {
+                        "$inc": {"available_quantity": -item["quantity"]},
+                        "$set": {"updated_at": created_at},
+                    },
+                    session=session,
+                )
     return get_invoice(invoice_id)
 
 
 def get_invoice(invoice_id: int) -> dict | None:
-    with db_session() as conn:
-        invoice = conn.execute("SELECT * FROM invoices WHERE id = ?", (invoice_id,)).fetchone()
-        if not invoice:
-            return None
-        items = conn.execute(
-            "SELECT * FROM invoice_items WHERE invoice_id = ? ORDER BY id",
-            (invoice_id,),
-        ).fetchall()
-    data = dict(invoice)
-    data["items"] = [dict(item) for item in items]
-    data["business"] = get_settings()
-    return data
+    invoice = _document(get_collection("invoices").find_one({"id": int(invoice_id)}, {"_id": 0}))
+    if not invoice:
+        return None
+    items = get_collection("invoice_items").find(
+        {"invoice_id": int(invoice_id)}, {"_id": 0}
+    ).sort("id", 1)
+    invoice["items"] = [_document(item) for item in items]
+    invoice["business"] = get_settings()
+    return invoice
 
 
 def search_invoices(query: str = "") -> list[dict]:
     q = (query or "").strip()
-    sql = "SELECT * FROM invoices"
-    params: list = []
+    filter_query = {}
     if q:
-        sql += """
-            WHERE invoice_number LIKE ?
-               OR customer_name LIKE ?
-               OR customer_phone LIKE ?
-               OR invoice_date LIKE ?
-        """
-        like = f"%{q}%"
-        params = [like, like, like, like]
-    sql += " ORDER BY created_at DESC, id DESC"
-    with db_session() as conn:
-        rows = conn.execute(sql, params).fetchall()
-    return [dict(row) for row in rows]
+        escaped = re.escape(q)
+        filter_query = {"$or": [
+            {"invoice_number": {"$regex": escaped, "$options": "i"}},
+            {"customer_name": {"$regex": escaped, "$options": "i"}},
+            {"customer_phone": {"$regex": escaped, "$options": "i"}},
+            {"invoice_date": {"$regex": escaped, "$options": "i"}},
+        ]}
+    invoices = get_collection("invoices").find(filter_query, {"_id": 0}).sort([
+        ("created_at", -1),
+        ("id", -1),
+    ])
+    return [_document(row) for row in invoices]
 
 
 def set_invoice_pdf_path(invoice_id: int, pdf_path: str) -> None:
-    with db_session() as conn:
-        conn.execute("UPDATE invoices SET pdf_path = ? WHERE id = ?", (pdf_path, invoice_id))
+    get_collection("invoices").update_one(
+        {"id": int(invoice_id)},
+        {"$set": {"pdf_path": pdf_path}},
+    )

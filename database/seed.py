@@ -10,6 +10,8 @@ from config import (
     INVOICE_TAGLINE,
     TERMS_AND_CONDITIONS,
 )
+from database.db import next_id
+from database.mongodb import COLLECTIONS
 
 SEED_PRODUCTS = [
     {"name": "FLEUR", "sku": "DEL-FLEUR"},
@@ -20,44 +22,40 @@ SEED_PRODUCTS = [
 ]
 
 
-def seed_if_needed(conn) -> None:
+def seed_if_needed(database) -> None:
     now = datetime.now(timezone.utc).isoformat()
+    settings = {**BUSINESS_CONFIG}
+    settings.update({
+        "terms": TERMS_AND_CONDITIONS,
+        "footer_thank_you": INVOICE_FOOTER_THANK_YOU,
+        "tagline": INVOICE_TAGLINE,
+    })
 
-    setting_rows = {**BUSINESS_CONFIG}
-    setting_rows["terms"] = TERMS_AND_CONDITIONS
-    setting_rows["footer_thank_you"] = INVOICE_FOOTER_THANK_YOU
-    setting_rows["tagline"] = INVOICE_TAGLINE
-
-    for key, value in setting_rows.items():
-        conn.execute(
-            """
-            INSERT INTO settings (key, value) VALUES (?, ?)
-            ON CONFLICT(key) DO UPDATE SET value = excluded.value
-            """,
-            (key, str(value)),
+    settings_collection = database[COLLECTIONS["settings"]]
+    for key, value in settings.items():
+        settings_collection.update_one(
+            {"key": key},
+            {"$set": {"key": key, "value": str(value)}},
+            upsert=True,
         )
 
-    existing = conn.execute("SELECT COUNT(*) AS c FROM products").fetchone()["c"]
-    if existing:
+    products = database[COLLECTIONS["products"]]
+    if products.count_documents({}):
         return
 
     for product in SEED_PRODUCTS:
-        conn.execute(
-            """
-            INSERT INTO products (
-                name, sku, size, price, gst_rate, hsn_sac,
-                available_quantity, is_active, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
-            """,
-            (
-                product["name"],
-                product["sku"],
-                DEFAULT_SIZE,
-                DEFAULT_PRODUCT_PRICE,
-                DEFAULT_GST_RATE,
-                DEFAULT_HSN,
-                100,
-                now,
-                now,
-            ),
-        )
+        product_id = next_id("products")
+        products.insert_one({
+            "_id": product_id,
+            "id": product_id,
+            "name": product["name"],
+            "sku": product["sku"],
+            "size": DEFAULT_SIZE,
+            "price": DEFAULT_PRODUCT_PRICE,
+            "gst_rate": DEFAULT_GST_RATE,
+            "hsn_sac": DEFAULT_HSN,
+            "available_quantity": 100,
+            "is_active": 1,
+            "created_at": now,
+            "updated_at": now,
+        })

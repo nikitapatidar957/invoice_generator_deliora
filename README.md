@@ -1,6 +1,6 @@
-# DeLiora Essence by Patidar — Offline Invoice App
+# DeLiora Essence by Patidar — Invoice App
 
-Local billing for Fleur, Alpha, Mistique, Velvet and Blanc. No internet, cloud database, or payment gateway is required after the Python packages are installed.
+Billing for Fleur, Alpha, Mistique, Velvet and Blanc using MongoDB Atlas. The app does not process online payments.
 
 ## Install
 
@@ -32,7 +32,7 @@ Open [http://127.0.0.1:5000](http://127.0.0.1:5000) on this laptop.
 4. Choose payment method. UPI ID appears only for UPI. This app only records payment details; it does not collect money online.
 5. Watch the live preview on the same screen, then **Save & Download PDF**.
 
-Invoice numbers look like `DEL-2026-0001` and continue from SQLite after restart.
+Invoice numbers look like `DEL-2026-0001` and continue from MongoDB Atlas after restart.
 
 ## Pages
 
@@ -41,3 +41,14 @@ Invoice numbers look like `DEL-2026-0001` and continue from SQLite after restart
 - `/products` — add, edit, deactivate (no hard delete)
 
 PDFs are written with ReportLab into `invoices/DEL-YYYY-NNNN.pdf`.
+
+## MongoDB Atlas
+
+The application stores settings, products, invoices, invoice items, counters,
+and ID sequences in MongoDB Atlas collections. Configure `MONGODB_URI` and
+optionally `MONGODB_DATABASE=deliora` in `.env`, then verify the connection with:
+
+```bash
+python -c "from database.mongodb import verify_mongo_connection; print(verify_mongo_connection())"
+```
+

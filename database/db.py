@@ -1,35 +1,37 @@
-import sqlite3
-from contextlib import contextmanager
-from pathlib import Path
+from pymongo import ReturnDocument
 
-from config import DATABASE_PATH, INVOICES_DIR
-from database.models import SCHEMA_SQL
-from database.seed import seed_if_needed
+from database.mongodb import COLLECTIONS, get_mongo_database
 
 
-def get_connection() -> sqlite3.Connection:
-    INVOICES_DIR.mkdir(parents=True, exist_ok=True)
-    Path(DATABASE_PATH).parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(DATABASE_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    return conn
+def get_database():
+    return get_mongo_database()
 
 
-@contextmanager
-def db_session():
-    conn = get_connection()
-    try:
-        yield conn
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
+def get_collection(name: str):
+    return get_database()[COLLECTIONS[name]]
+
+
+def next_id(sequence_name: str, session=None) -> int:
+    result = get_collection("sequences").find_one_and_update(
+        {"_id": sequence_name},
+        {"$inc": {"value": 1}},
+        upsert=True,
+        return_document=ReturnDocument.AFTER,
+        session=session,
+    )
+    return result["value"]
 
 
 def init_db() -> None:
-    with db_session() as conn:
-        conn.executescript(SCHEMA_SQL)
-        seed_if_needed(conn)
+    database = get_database()
+    database[COLLECTIONS["settings"]].create_index("key", unique=True)
+    database[COLLECTIONS["products"]].create_index("sku", unique=True)
+    database[COLLECTIONS["products"]].create_index([("name", 1)])
+    database[COLLECTIONS["invoices"]].create_index("invoice_number", unique=True)
+    database[COLLECTIONS["invoices"]].create_index([("created_at", -1)])
+    database[COLLECTIONS["invoices"]].create_index("customer_name")
+    database[COLLECTIONS["invoice_items"]].create_index([("invoice_id", 1), ("id", 1)])
+
+    from database.seed import seed_if_needed
+
+    seed_if_needed(database)

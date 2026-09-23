@@ -55,9 +55,7 @@ def save_invoice():
     payload = request.get_json(force=True) or {}
     try:
         invoice = create_invoice(payload)
-        pdf_path = generate_invoice_pdf(invoice["id"])
-        invoice = get_invoice(invoice["id"])
-        invoice["download_name"] = pdf_path.name
+        invoice["download_name"] = f"{invoice['invoice_number']}.pdf"
         return jsonify(invoice)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
@@ -77,9 +75,11 @@ def download_pdf(invoice_id: int):
     if not invoice:
         return jsonify({"error": "Invoice not found."}), 404
     pdf_path = generate_invoice_pdf(invoice_id)
-    return send_file(
+    response = send_file(
         pdf_path,
         mimetype="application/pdf",
         as_attachment=True,
         download_name=f"{invoice['invoice_number']}.pdf",
     )
+    response.call_on_close(lambda: pdf_path.unlink(missing_ok=True))
+    return response

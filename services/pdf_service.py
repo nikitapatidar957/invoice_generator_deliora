@@ -1,4 +1,5 @@
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
@@ -14,9 +15,9 @@ from reportlab.platypus import (
     TableStyle,
 )
 
-from config import BASE_DIR, INVOICES_DIR, LOGO_ABS_PATH
+from config import BASE_DIR, LOGO_ABS_PATH
 from services.calculation_service import format_inr
-from services.invoice_service import get_invoice, set_invoice_pdf_path
+from services.invoice_service import get_invoice
 
 BURGUNDY = colors.HexColor("#2B0F12")
 GOLD = colors.HexColor("#B8924A")
@@ -25,13 +26,19 @@ BROWN = colors.HexColor("#211817")
 LINE = colors.HexColor("#D9CDB8")
 
 
-def generate_invoice_pdf(invoice_id: int) -> Path:
+def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Path:
     invoice = get_invoice(invoice_id)
     if not invoice:
         raise ValueError("Invoice not found.")
 
-    INVOICES_DIR.mkdir(parents=True, exist_ok=True)
-    pdf_path = INVOICES_DIR / f"{invoice['invoice_number']}.pdf"
+    if output_path is None:
+        with NamedTemporaryFile(
+            prefix=f"{invoice['invoice_number']}-",
+            suffix=".pdf",
+            delete=False,
+        ) as temporary_file:
+            output_path = Path(temporary_file.name)
+    pdf_path = Path(output_path)
 
     doc = SimpleDocTemplate(
         str(pdf_path),
@@ -312,7 +319,6 @@ def generate_invoice_pdf(invoice_id: int) -> Path:
         canvas.restoreState()
 
     doc.build(story, onFirstPage=_footer, onLaterPages=_footer)
-    set_invoice_pdf_path(invoice_id, str(pdf_path.relative_to(BASE_DIR)))
     return pdf_path
 
 

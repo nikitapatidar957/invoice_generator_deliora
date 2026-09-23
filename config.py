@@ -33,7 +33,7 @@ INVOICE_FOOTER_THANK_YOU = os.getenv(
 
 INVOICE_TAGLINE = os.getenv("INVOICE_TAGLINE", "A scent that lingers.")
 
-# Placeholder default — each product stores its own rate in SQLite.
+# Placeholder default — each product stores its own rate in MongoDB Atlas.
 DEFAULT_GST_RATE = float(os.getenv("DEFAULT_GST_RATE", "18"))
 DEFAULT_PRODUCT_PRICE = float(os.getenv("DEFAULT_PRODUCT_PRICE", "1499"))
 DEFAULT_HSN = os.getenv("DEFAULT_HSN", "3303")
@@ -42,6 +42,5 @@ DEFAULT_SIZE = os.getenv("DEFAULT_SIZE", "100 ml")
 INVOICE_PREFIX = os.getenv("INVOICE_PREFIX", "DEL")
 SECRET_KEY = os.getenv("SECRET_KEY", "deliora-offline-dev-key")
 
-DATABASE_PATH = BASE_DIR / os.getenv("DATABASE_NAME", "deliora.db")
 INVOICES_DIR = BASE_DIR / "invoices"
 LOGO_ABS_PATH = BASE_DIR / BUSINESS_CONFIG["logo"]
