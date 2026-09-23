@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}{{ invoice.invoice_number }} — DeLiora{% endblock %}
+{% block content %}
+<section class="page-head">
+    <div>
+        <p class="eyebrow">Saved Invoice</p>
+        <h1>{{ invoice.invoice_number }}</h1>
+    </div>
+    <div class="actions">
+        <a class="btn ghost" href="{{ url_for('history.history_page') }}">Back to history</a>
+        <a class="btn primary" href="{{ url_for('invoice.download_pdf', invoice_id=invoice.id) }}">Download PDF</a>
+    </div>
+</section>
+<section class="panel preview-panel saved-preview">
+    {% include "_invoice_sheet.html" %}
+</section>
+{% endblock %}

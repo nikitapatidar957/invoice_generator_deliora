@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Invoice History — DeLiora{% endblock %}
+{% block content %}
+<section class="page-head">
+    <div>
+        <p class="eyebrow">DeLiora Essence by Patidar</p>
+        <h1>Invoice History</h1>
+    </div>
+    <form class="search-bar" method="get" action="{{ url_for('history.history_page') }}">
+        <input name="q" value="{{ query }}" placeholder="Search invoice no, customer, phone or date">
+        <button class="btn primary" type="submit">Search</button>
+    </form>
+</section>
+
+{% if error %}<div class="alert">{{ error }}</div>{% endif %}
+
+<div class="panel">
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Invoice No</th>
+                    <th>Date</th>
+                    <th>Customer</th>
+                    <th>Amount</th>
+                    <th>Payment Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inv in invoices %}
+                <tr>
+                    <td>{{ inv.invoice_number }}</td>
+                    <td>{{ inv.invoice_date }}</td>
+                    <td>
+                        <strong>{{ inv.customer_name }}</strong>
+                        <div class="muted">{{ inv.customer_phone }}</div>
+                    </td>
+                    <td>₹{{ '%.2f'|format(inv.grand_total) }}</td>
+                    <td><span class="status {{ inv.payment_status }}">{{ inv.payment_status }}</span></td>
+                    <td class="row-actions">
+                        <a class="btn ghost" href="{{ url_for('history.view_invoice', invoice_id=inv.id) }}">View</a>
+                        <a class="btn primary" href="{{ url_for('invoice.download_pdf', invoice_id=inv.id) }}">Download</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" class="empty">No invoices yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

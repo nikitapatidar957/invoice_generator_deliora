@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Products — DeLiora{% endblock %}
+{% block content %}
+<section class="page-head">
+    <div>
+        <p class="eyebrow">Catalogue</p>
+        <h1>Products</h1>
+        <p class="lede">Edit prices, GST and HSN here. Inactive perfumes stay on old invoices but cannot be billed again.</p>
+    </div>
+    <button class="btn primary" id="newProduct">Add Product</button>
+</section>
+<div id="alert" class="alert hidden"></div>
+<div class="panel">
+    <div class="table-wrap">
+        <table class="data-table" id="productTable">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>SKU</th>
+                    <th>Size</th>
+                    <th>Price</th>
+                    <th>GST %</th>
+                    <th>HSN/SAC</th>
+                    <th>Qty</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in products %}
+                <tr data-id="{{ p.id }}">
+                    <td><input class="name" value="{{ p.name }}"></td>
+                    <td><input class="sku" value="{{ p.sku }}"></td>
+                    <td><input class="size" value="{{ p.size }}"></td>
+                    <td><input class="price" type="number" min="0" step="0.01" value="{{ p.price }}"></td>
+                    <td><input class="gst" type="number" min="0" step="0.01" value="{{ p.gst_rate }}"></td>
+                    <td><input class="hsn" value="{{ p.hsn_sac }}"></td>
+                    <td><input class="qty" type="number" min="0" step="1" value="{{ p.available_quantity }}"></td>
+                    <td>{{ 'Active' if p.is_active else 'Inactive' }}</td>
+                    <td class="row-actions">
+                        <button class="btn ghost save">Save</button>
+                        {% if p.is_active %}
+                        <button class="btn danger deactivate">Deactivate</button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/products.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}DeLiora Invoice{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header class="topbar">
+        <a class="brand" href="{{ url_for('invoice.create_page') }}">
+            <img src="{{ url_for('static', filename='images/deliora-logo.png') }}" alt="DeLiora logo">
+            <div>
+                <strong>{{ business.business_name or 'DeLiora Essence by Patidar' }}</strong>
+                <span>Offline Invoice</span>
+            </div>
+        </a>
+        <nav>
+            <a href="{{ url_for('invoice.create_page') }}" class="{% if request.path == '/' %}active{% endif %}">Invoice</a>
+            <a href="{{ url_for('history.history_page') }}" class="{% if request.path.startswith('/history') %}active{% endif %}">History</a>
+            <a href="{{ url_for('products.products_page') }}" class="{% if request.path.startswith('/products') %}active{% endif %}">Products</a>
+        </nav>
+    </header>
+    <main class="page">
+        {% block content %}{% endblock %}
+    </main>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

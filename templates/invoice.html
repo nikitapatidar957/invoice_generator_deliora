@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Create New Invoice — DeLiora{% endblock %}
+{% block content %}
+<section class="page-head">
+    <div>
+        <p class="eyebrow">DeLiora Essence by Patidar</p>
+        <h1>Create New Invoice</h1>
+        <p class="lede">Enter the customer, add perfumes, and the live preview on the right updates as you type.</p>
+    </div>
+    <div class="invoice-meta-chip">
+        <span>Invoice No</span>
+        <strong id="invoiceNumber">{{ next_invoice_number }}</strong>
+        <span>Date</span>
+        <input type="date" id="invoiceDate">
+    </div>
+</section>
+
+<div id="alert" class="alert hidden"></div>
+
+<div class="workspace">
+    <form id="invoiceForm" class="panel form-panel" autocomplete="off">
+        <h2>Customer Details</h2>
+        <div class="grid two">
+            <label>Customer Name *
+                <input id="customerName" required placeholder="Full name">
+            </label>
+            <label>Customer Phone
+                <input id="customerPhone" placeholder="10-digit number">
+            </label>
+            <label>Customer Email
+                <input id="customerEmail" type="email" placeholder="name@email.com">
+            </label>
+            <label>Customer GSTIN (optional)
+                <input id="customerGstin" placeholder="Leave blank for consumer" maxlength="15">
+            </label>
+            <label class="full">Customer Address
+                <textarea id="customerAddress" rows="2" placeholder="Bill-to address"></textarea>
+            </label>
+        </div>
+
+        <div class="section-split">
+            <h2>Product Selection</h2>
+            <button type="button" class="btn ghost" id="addProduct">+ Add Product</button>
+        </div>
+        <div class="table-wrap">
+            <table class="line-table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Qty</th>
+                        <th>Selling Price</th>
+                        <th>Disc %</th>
+                        <th>Disc ₹</th>
+                        <th>GST %</th>
+                        <th>Taxable</th>
+                        <th>GST Amt</th>
+                        <th>Total</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="lineBody"></tbody>
+            </table>
+        </div>
+        <p class="hint">Default selling price is ₹1,499. Discount % is 0. Use Disc ₹ for a fixed rupee off. The rupee discount is subtracted from selling price × qty, then GST is applied.</p>
+
+        <h2>Payment Details</h2>
+        <div class="grid three">
+            <label>Tax Type
+                <select id="taxType">
+                    <option value="intra">Intra-State (CGST + SGST)</option>
+                    <option value="inter">Inter-State (IGST)</option>
+                </select>
+            </label>
+            <label>Payment Method
+                <select id="paymentMethod">
+                    <option value="cash">Cash</option>
+                    <option value="upi">UPI</option>
+                    <option value="bank">Bank Transfer</option>
+                    <option value="card">Card</option>
+                    <option value="other">Other</option>
+                </select>
+            </label>
+            <label>Payment Status
+                <select id="paymentStatus">
+                    <option value="paid">Paid</option>
+                    <option value="partial">Partially Paid</option>
+                    <option value="unpaid">Unpaid</option>
+                </select>
+            </label>
+            <label id="upiField" class="hidden">Customer UPI ID
+                <input id="upiId" placeholder="nikita@upi">
+            </label>
+            <label id="refField" class="hidden">Transaction / Reference
+                <input id="txnRef" placeholder="Reference number">
+            </label>
+            <label id="paidField" class="hidden">Amount Paid
+                <input id="amountPaid" type="number" min="0" step="0.01" value="0">
+            </label>
+        </div>
+
+        <aside class="totals">
+            <div><span>Subtotal</span><strong id="tSubtotal">₹0.00</strong></div>
+            <div><span>Discount</span><strong id="tDiscount">₹0.00</strong></div>
+            <hr>
+            <div><span>Taxable Amount</span><strong id="tTaxable">₹0.00</strong></div>
+            <div id="cgstRow"><span>CGST</span><strong id="tCgst">₹0.00</strong></div>
+            <div id="sgstRow"><span>SGST</span><strong id="tSgst">₹0.00</strong></div>
+            <div id="igstRow" class="hidden"><span>IGST</span><strong id="tIgst">₹0.00</strong></div>
+            <div><span>Total GST</span><strong id="tGst">₹0.00</strong></div>
+            <hr>
+            <div class="grand"><span>GRAND TOTAL</span><strong id="tGrand">₹0.00</strong></div>
+            <div><span>Amount Paid</span><strong id="tPaid">₹0.00</strong></div>
+            <div><span>Balance Due</span><strong id="tBalance">₹0.00</strong></div>
+        </aside>
+
+        <div class="actions">
+            <button type="submit" class="btn primary" id="saveDownload">Save &amp; Download PDF</button>
+            <button type="button" class="btn ghost" id="saveOnly">Save Invoice</button>
+        </div>
+    </form>
+
+    <section class="panel preview-panel">
+        <div class="preview-toolbar">
+            <h2>Live Invoice Preview</h2>
+        </div>
+        <div id="previewSheet" class="invoice-sheet"></div>
+    </section>
+</div>
+
+<template id="lineTemplate">
+    <tr class="line-row">
+        <td>
+            <select class="product-select"></select>
+        </td>
+        <td><input class="qty" type="number" min="1" step="1" value="1"></td>
+        <td><input class="price" type="number" min="0" step="0.01"></td>
+        <td><input class="disc-pct" type="number" min="0" step="0.01" value="0"></td>
+        <td><input class="disc-fix" type="number" min="0" step="0.01" value="0"></td>
+        <td><input class="gst" type="number" min="0" step="0.01"></td>
+        <td class="num taxable">₹0.00</td>
+        <td class="num gst-amt">₹0.00</td>
+        <td class="num line-total">₹0.00</td>
+        <td><button type="button" class="icon-btn remove" title="Remove">×</button></td>
+    </tr>
+</template>
+{% endblock %}
+{% block scripts %}
+<script>
+    window.DELIORA = {
+        products: {{ products | tojson }},
+        business: {{ business | tojson }},
+        nextInvoiceNumber: {{ next_invoice_number | tojson }}
+    };
+</script>
+<script src="{{ url_for('static', filename='js/invoice.js') }}"></script>
+{% endblock %}
