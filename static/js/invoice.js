@@ -274,7 +274,7 @@ function renderPreview(state) {
                 <p>${b.phone || ""} · ${b.email || ""} · ${b.website || ""}</p>
             </div>
             <div class="sheet-title">
-                <strong>${state.due_payment_only ? "DUE PAYMENT RECEIPT" : "TAX INVOICE"}</strong>
+                <strong>INVOICE</strong>
                 <p>${state.invoice_number}</p>
                 <p>${state.invoice_date.split("-").reverse().join("/")}</p>
             </div>
@@ -296,15 +296,17 @@ function renderPreview(state) {
                 <p>Tax: ${state.tax_type === "intra" ? "Intra-State (CGST/SGST)" : "Inter-State (IGST)"}</p>
             </div>
         </section>
-        <table class="sheet-items">
-            <thead>
-                <tr>
-                    <th>Sr.</th><th>Product</th><th>Qty</th><th>Rate</th>
-                    <th>Discount</th><th>Taxable</th><th>GST</th><th>Total</th>
-                </tr>
-            </thead>
-            <tbody>${itemRows}</tbody>
-        </table>
+        <div class="sheet-items-scroll">
+            <table class="sheet-items">
+                <thead>
+                    <tr>
+                        <th>Sr.</th><th>Product</th><th>Qty</th><th>Rate</th>
+                        <th>Discount</th><th>Taxable</th><th>GST</th><th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>${itemRows}</tbody>
+            </table>
+        </div>
         <section class="sheet-bottom">
             <div>
                 <h3>Tax Summary</h3>

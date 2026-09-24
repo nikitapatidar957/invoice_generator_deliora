@@ -151,7 +151,7 @@ def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Pa
     ]
     header = Table(
         [[logo_cell, seller_lines, Paragraph(
-            "DUE PAYMENT RECEIPT" if invoice.get("due_payment_only", False) else "TAX INVOICE",
+            "INVOICE",
             heading,
         )]],
         colWidths=[32 * mm, 105 * mm, 45 * mm],

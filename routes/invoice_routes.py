@@ -1,3 +1,5 @@
+import re
+
 from flask import Blueprint, jsonify, render_template, request, send_file
 
 from services.calculation_service import calculate_invoice
@@ -12,6 +14,15 @@ from services.number_to_words import amount_in_words
 from services.pdf_service import generate_invoice_pdf
 
 invoice_bp = Blueprint("invoice", __name__)
+
+
+def invoice_download_name(invoice: dict) -> str:
+    username = re.sub(
+        r"[^A-Za-z0-9]+",
+        "_",
+        invoice.get("customer_name", "customer"),
+    ).strip("_").lower()
+    return f"invoice_{username or 'customer'}.pdf"
 
 
 @invoice_bp.get("/")
@@ -57,7 +68,7 @@ def save_invoice():
     payload = request.get_json(force=True) or {}
     try:
         invoice = create_invoice(payload)
-        invoice["download_name"] = f"{invoice['invoice_number']}.pdf"
+        invoice["download_name"] = invoice_download_name(invoice)
         return jsonify(invoice)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
@@ -81,7 +92,7 @@ def download_pdf(invoice_id: int):
         pdf_path,
         mimetype="application/pdf",
         as_attachment=True,
-        download_name=f"{invoice['invoice_number']}.pdf",
+        download_name=invoice_download_name(invoice),
     )
     response.call_on_close(lambda: pdf_path.unlink(missing_ok=True))
     return response
