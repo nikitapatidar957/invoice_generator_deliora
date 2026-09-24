@@ -42,5 +42,4 @@ DEFAULT_SIZE = os.getenv("DEFAULT_SIZE", "100 ml")
 INVOICE_PREFIX = os.getenv("INVOICE_PREFIX", "DEL")
 SECRET_KEY = os.getenv("SECRET_KEY", "deliora-offline-dev-key")
 
-INVOICES_DIR = BASE_DIR / "invoices"
 LOGO_ABS_PATH = BASE_DIR / BUSINESS_CONFIG["logo"]

@@ -6,6 +6,8 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
     Image,
     Paragraph,
@@ -24,6 +26,12 @@ GOLD = colors.HexColor("#B8924A")
 CREAM = colors.HexColor("#F6F1E8")
 BROWN = colors.HexColor("#211817")
 LINE = colors.HexColor("#D9CDB8")
+UNICODE_FONT_PATH = Path("/System/Library/Fonts/Supplemental/Arial Unicode.ttf")
+PDF_FONT = "Helvetica"
+
+if UNICODE_FONT_PATH.exists():
+    pdfmetrics.registerFont(TTFont("InvoiceUnicode", str(UNICODE_FONT_PATH)))
+    PDF_FONT = "InvoiceUnicode"
 
 
 def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Path:
@@ -55,7 +63,7 @@ def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Pa
     brand = ParagraphStyle(
         "Brand",
         parent=styles["Normal"],
-        fontName="Times-Bold",
+        fontName=PDF_FONT,
         fontSize=16,
         textColor=BURGUNDY,
         alignment=TA_LEFT,
@@ -64,7 +72,7 @@ def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Pa
     muted = ParagraphStyle(
         "Muted",
         parent=styles["Normal"],
-        fontName="Times-Roman",
+        fontName=PDF_FONT,
         fontSize=8.5,
         textColor=BROWN,
         leading=12,
@@ -72,7 +80,7 @@ def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Pa
     heading = ParagraphStyle(
         "InvHead",
         parent=styles["Normal"],
-        fontName="Times-Bold",
+        fontName=PDF_FONT,
         fontSize=14,
         textColor=GOLD,
         alignment=TA_RIGHT,
@@ -81,7 +89,7 @@ def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Pa
     small_bold = ParagraphStyle(
         "SmallBold",
         parent=styles["Normal"],
-        fontName="Times-Bold",
+        fontName=PDF_FONT,
         fontSize=9,
         textColor=BURGUNDY,
         leading=12,
@@ -89,7 +97,7 @@ def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Pa
     small = ParagraphStyle(
         "Small",
         parent=styles["Normal"],
-        fontName="Times-Roman",
+        fontName=PDF_FONT,
         fontSize=8.5,
         textColor=BROWN,
         leading=11,
@@ -98,7 +106,7 @@ def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Pa
         "CenterSmall",
         parent=small,
         alignment=TA_CENTER,
-        fontName="Times-Italic",
+        fontName=PDF_FONT,
         textColor=GOLD,
     )
     right = ParagraphStyle("Right", parent=small, alignment=TA_RIGHT)
@@ -106,7 +114,7 @@ def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Pa
     white_head = ParagraphStyle(
         "WhiteHead",
         parent=styles["Normal"],
-        fontName="Times-Bold",
+        fontName=PDF_FONT,
         fontSize=9,
         textColor=colors.white,
         leading=12,
@@ -312,7 +320,7 @@ def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Pa
         canvas.setStrokeColor(GOLD)
         canvas.setLineWidth(1)
         canvas.line(14 * mm, 10 * mm, A4[0] - 14 * mm, 10 * mm)
-        canvas.setFont("Times-Italic", 8)
+        canvas.setFont(PDF_FONT, 8)
         canvas.setFillColor(BURGUNDY)
         canvas.drawString(14 * mm, 6 * mm, "DeLiora Essence by Patidar")
         canvas.drawRightString(A4[0] - 14 * mm, 6 * mm, f"Page {canvas.getPageNumber()}")

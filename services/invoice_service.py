@@ -211,7 +211,6 @@ def create_invoice(payload: dict) -> dict:
         "total_igst": totals["total_igst"],
         "grand_total": totals["grand_total"],
         "amount_in_words": amount_in_words(totals["grand_total"]),
-        "pdf_path": "",
         "created_at": created_at,
     }
 
@@ -269,8 +268,3 @@ def search_invoices(query: str = "") -> list[dict]:
     return [_document(row) for row in invoices]
 
 
-def set_invoice_pdf_path(invoice_id: int, pdf_path: str) -> None:
-    get_collection("invoices").update_one(
-        {"id": int(invoice_id)},
-        {"$set": {"pdf_path": pdf_path}},
-    )
