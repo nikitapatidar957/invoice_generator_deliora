@@ -72,6 +72,9 @@ h2 { margin: 0 0 12px; color: var(--burgundy); font-size: 18px; }
 .grid.two { grid-template-columns: 1fr 1fr; }
 .grid.three { grid-template-columns: 1fr 1fr 1fr; }
 label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); }
+.check-label { display: block; }
+.check-label span { display: flex; align-items: center; gap: 8px; }
+.check-label input { width: auto; }
 .full { grid-column: 1 / -1; }
 input, select, textarea {
     font: inherit;
@@ -145,6 +148,8 @@ input, select, textarea {
     border: 1px solid var(--gold);
     padding: 18px;
     min-height: 480px;
+    display: flex;
+    flex-direction: column;
 }
 .sheet-head { display: grid; grid-template-columns: 64px 1fr auto; gap: 12px; background: var(--cream); padding: 10px; }
 .sheet-head img { width: 64px; height: 64px; }
@@ -157,6 +162,7 @@ input, select, textarea {
 .sheet-items td { font-size: 12px; padding: 6px 4px; border-bottom: 1px solid var(--line); }
 .sheet-bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 14px; }
 .words { font-style: italic; }
+.sheet-foot { margin-top: auto; padding-top: 24px; }
 .tagline { color: var(--gold); }
 .search-bar { display: flex; gap: 8px; padding: 8px; }
 .search-bar input { flex: 1; }

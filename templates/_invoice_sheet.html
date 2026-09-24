@@ -5,7 +5,7 @@
         <div>
             <h2>{{ b.business_name }}</h2>
             <p>{{ b.address }}</p>
-            <p>GSTIN: {{ b.gstin }} · {{ b.state }} ({{ b.state_code }})</p>
+            <p>{{ b.state }} ({{ b.state_code }})</p>
             <p>{{ b.phone }} · {{ b.email }} · {{ b.website }}</p>
         </div>
         <div class="sheet-title">
@@ -21,7 +21,6 @@
             <p>{{ invoice.customer_phone }}</p>
             <p>{{ invoice.customer_email }}</p>
             <p>{{ invoice.customer_address }}</p>
-            <p>GSTIN: {{ invoice.customer_gstin or 'Unregistered / Consumer' }}</p>
         </div>
         <div>
             <h3>Payment</h3>
@@ -35,7 +34,7 @@
     <table class="sheet-items">
         <thead>
             <tr>
-                <th>Sr.</th><th>Product</th><th>SKU</th><th>Qty</th><th>Rate</th>
+                <th>Sr.</th><th>Product</th><th>Qty</th><th>Rate</th>
                 <th>Discount</th><th>Taxable</th><th>GST</th><th>Total</th>
             </tr>
         </thead>
@@ -44,7 +43,6 @@
             <tr>
                 <td>{{ loop.index }}</td>
                 <td>{{ item.product_name }}</td>
-                <td>{{ item.sku }}</td>
                 <td>{{ item.quantity }}</td>
                 <td>₹{{ '%.2f'|format(item.unit_price) }}</td>
                 <td>₹{{ '%.2f'|format(item.discount_amount) }}</td>
@@ -64,7 +62,8 @@
             {% else %}
             <p>IGST {{ '%.2f'|format(invoice.total_igst) }}</p>
             {% endif %}
-            <p class="words">{{ invoice.amount_in_words }}</p>
+            <p>GSTIN: {{ invoice.customer_gstin or b.gstin }}</p>
+            <p class="words">Amount in words: {{ invoice.amount_in_words }}</p>
         </div>
         <div class="sheet-totals">
             <p><span>Subtotal</span><strong>₹{{ '%.2f'|format(invoice.subtotal) }}</strong></p>
@@ -76,10 +75,14 @@
             <p><span>Balance Due</span><strong>₹{{ '%.2f'|format(invoice.balance_due) }}</strong></p>
         </div>
     </section>
+    {% if invoice.get('footer_enabled', true) %}
     <footer class="sheet-foot">
-        <p>{{ b.footer_thank_you }}</p>
-        <p class="tagline">{{ b.tagline }}</p>
+        <p>{{ invoice.get('footer_text', b.footer_thank_you) }}</p>
+        <p class="tagline">{{ invoice.get('tagline', b.tagline) }}</p>
+        {% if invoice.get('terms_enabled', true) %}
         <h4>Terms &amp; Conditions</h4>
-        <p>{{ b.terms }}</p>
+        <p>{{ invoice.get('terms_text', b.terms) }}</p>
+        {% endif %}
     </footer>
+    {% endif %}
 </div>

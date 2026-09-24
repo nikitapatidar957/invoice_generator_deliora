@@ -214,6 +214,11 @@ function collectState() {
         grand_total: grand,
         amount_in_words: toWords(grand),
         invoice_number: document.getElementById("invoiceNumber").textContent,
+        footer_enabled: document.getElementById("footerEnabled").checked,
+        footer_text: document.getElementById("footerText").value.trim(),
+        tagline: document.getElementById("taglineText").value.trim(),
+        terms_enabled: document.getElementById("termsEnabled").checked,
+        terms_text: document.getElementById("termsText").value.trim(),
     };
 }
 
@@ -239,7 +244,6 @@ function renderPreview(state) {
         <tr>
             <td>${i + 1}</td>
             <td>${item.product_name}</td>
-            <td>${item.sku}</td>
             <td>${item.quantity}</td>
             <td>${formatINR(item.unit_price)}</td>
             <td>${formatINR(item.discount_amount)}</td>
@@ -247,7 +251,7 @@ function renderPreview(state) {
             <td>${item.gst_rate}% ${formatINR(item.gst_amount)}</td>
             <td>${formatINR(item.line_total)}</td>
         </tr>
-    `).join("") || `<tr><td colspan="9" class="empty">Select perfumes to preview the invoice.</td></tr>`;
+    `).join("") || `<tr><td colspan="8" class="empty">Select perfumes to preview the invoice.</td></tr>`;
     const extra = [
         state.customer_upi_id ? `UPI: ${state.customer_upi_id}` : "",
         state.transaction_reference ? `Ref: ${state.transaction_reference}` : "",
@@ -258,7 +262,7 @@ function renderPreview(state) {
             <div>
                 <h2>${b.business_name || "DeLiora Essence by Patidar"}</h2>
                 <p>${b.address || ""}</p>
-                <p>GSTIN: ${b.gstin || ""} · ${b.state || ""} (${b.state_code || ""})</p>
+                <p>${b.state || ""} (${b.state_code || ""})</p>
                 <p>${b.phone || ""} · ${b.email || ""} · ${b.website || ""}</p>
             </div>
             <div class="sheet-title">
@@ -274,7 +278,6 @@ function renderPreview(state) {
                 <p>${state.customer_phone}</p>
                 <p>${state.customer_email}</p>
                 <p>${state.customer_address}</p>
-                <p>GSTIN: ${gstin}</p>
             </div>
             <div>
                 <h3>Payment</h3>
@@ -287,7 +290,7 @@ function renderPreview(state) {
         <table class="sheet-items">
             <thead>
                 <tr>
-                    <th>Sr.</th><th>Product</th><th>SKU</th><th>Qty</th><th>Rate</th>
+                    <th>Sr.</th><th>Product</th><th>Qty</th><th>Rate</th>
                     <th>Discount</th><th>Taxable</th><th>GST</th><th>Total</th>
                 </tr>
             </thead>
@@ -297,7 +300,8 @@ function renderPreview(state) {
             <div>
                 <h3>Tax Summary</h3>
                 ${taxRows}
-                <p class="words">${state.amount_in_words}</p>
+                <p>GSTIN: ${state.customer_gstin || b.gstin || ""}</p>
+                <p class="words">Amount in words: ${state.amount_in_words}</p>
             </div>
             <div class="sheet-totals">
                 <p><span>Subtotal</span><strong>${formatINR(state.subtotal)}</strong></p>
@@ -309,12 +313,11 @@ function renderPreview(state) {
                 <p><span>Balance Due</span><strong>${formatINR(state.balance_due)}</strong></p>
             </div>
         </section>
-        <footer class="sheet-foot">
-            <p>${b.footer_thank_you || "Thank you for choosing DeLiora Essence by Patidar."}</p>
-            <p class="tagline">${b.tagline || "A scent that lingers."}</p>
-            <h4>Terms &amp; Conditions</h4>
-            <p>${b.terms || ""}</p>
-        </footer>
+        ${state.footer_enabled ? `<footer class="sheet-foot">
+            <p>${state.footer_text}</p>
+            <p class="tagline">${state.tagline}</p>
+            ${state.terms_enabled ? `<h4>Terms &amp; Conditions</h4><p>${state.terms_text}</p>` : ""}
+        </footer>` : ""}
     `;
 }
 

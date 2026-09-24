@@ -211,6 +211,11 @@ def create_invoice(payload: dict) -> dict:
         "total_igst": totals["total_igst"],
         "grand_total": totals["grand_total"],
         "amount_in_words": amount_in_words(totals["grand_total"]),
+        "footer_enabled": bool(payload.get("footer_enabled", True)),
+        "footer_text": (payload.get("footer_text") or "").strip(),
+        "tagline": (payload.get("tagline") or "").strip(),
+        "terms_enabled": bool(payload.get("terms_enabled", True)),
+        "terms_text": (payload.get("terms_text") or "").strip(),
         "created_at": created_at,
     }
 

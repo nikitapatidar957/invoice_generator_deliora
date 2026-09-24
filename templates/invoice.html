@@ -98,6 +98,25 @@
             </label>
         </div>
 
+        <h2>Invoice Footer</h2>
+        <div class="grid two footer-options">
+            <label class="check-label full">
+                <span><input id="footerEnabled" type="checkbox" checked> Show thank-you footer</span>
+            </label>
+            <label>Thank-you message
+                <input id="footerText" value="{{ business.footer_thank_you }}">
+            </label>
+            <label>Tagline
+                <input id="taglineText" value="{{ business.tagline }}">
+            </label>
+            <label class="check-label full">
+                <span><input id="termsEnabled" type="checkbox" checked> Include terms &amp; conditions</span>
+            </label>
+            <label class="full">Terms &amp; conditions text
+                <textarea id="termsText" rows="4">{{ business.terms }}</textarea>
+            </label>
+        </div>
+
         <aside class="totals">
             <div><span>Subtotal</span><strong id="tSubtotal">₹0.00</strong></div>
             <div><span>Discount</span><strong id="tDiscount">₹0.00</strong></div>

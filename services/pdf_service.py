@@ -1,5 +1,6 @@
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+from html import escape
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
@@ -34,6 +35,10 @@ if UNICODE_FONT_PATH.exists():
     PDF_FONT = "InvoiceUnicode"
 
 
+def format_pdf_currency(value) -> str:
+    return format_inr(value).replace("₹", "INR ")
+
+
 def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Path:
     invoice = get_invoice(invoice_id)
     if not invoice:
@@ -54,7 +59,7 @@ def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Pa
         leftMargin=14 * mm,
         rightMargin=14 * mm,
         topMargin=12 * mm,
-        bottomMargin=12 * mm,
+        bottomMargin=42 * mm,
         title=invoice["invoice_number"],
         author=invoice["business"].get("business_name", "DeLiora"),
     )
@@ -134,7 +139,7 @@ def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Pa
         Paragraph(business.get("business_name", "DeLiora Essence by Patidar"), brand),
         Paragraph(business.get("address", ""), muted),
         Paragraph(
-            f"GSTIN: {business.get('gstin', '')} &nbsp;&nbsp; State: {business.get('state', '')} "
+            f"State: {business.get('state', '')} "
             f"({business.get('state_code', '')})",
             muted,
         ),
@@ -164,7 +169,7 @@ def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Pa
     story.append(header)
     story.append(Spacer(1, 6 * mm))
 
-    gstin_line = invoice["customer_gstin"] or "Unregistered / Consumer"
+    gstin_line = invoice["customer_gstin"] or business.get("gstin", "")
     invoice_dt = _format_date(invoice["invoice_date"])
     meta = Table(
         [
@@ -215,7 +220,6 @@ def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Pa
     table_header = [
         Paragraph("Sr.", small_bold),
         Paragraph("Product", small_bold),
-        Paragraph("SKU", small_bold),
         Paragraph("Qty", small_bold),
         Paragraph("Rate", small_bold),
         Paragraph("Discount", small_bold),
@@ -225,24 +229,23 @@ def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Pa
     ]
     rows = [table_header]
     for idx, item in enumerate(invoice["items"], start=1):
-        gst_cell = f"{item['gst_rate']:.0f}% {format_inr(item['gst_amount'])}"
+        gst_cell = f"{item['gst_rate']:.0f}% {format_pdf_currency(item['gst_amount'])}"
         rows.append(
             [
                 Paragraph(str(idx), small),
                 Paragraph(item["product_name"], small),
-                Paragraph(item["sku"], small),
                 Paragraph(str(item["quantity"]), small),
-                Paragraph(format_inr(item["unit_price"]), small),
-                Paragraph(format_inr(item["discount_amount"]), small),
-                Paragraph(format_inr(item["taxable_amount"]), small),
+                Paragraph(format_pdf_currency(item["unit_price"]), small),
+                Paragraph(format_pdf_currency(item["discount_amount"]), small),
+                Paragraph(format_pdf_currency(item["taxable_amount"]), small),
                 Paragraph(gst_cell, small),
-                Paragraph(format_inr(item["line_total"]), small),
+                Paragraph(format_pdf_currency(item["line_total"]), small),
             ]
         )
 
     items_table = Table(
         rows,
-        colWidths=[10 * mm, 32 * mm, 26 * mm, 12 * mm, 20 * mm, 20 * mm, 22 * mm, 22 * mm, 18 * mm],
+        colWidths=[12 * mm, 42 * mm, 14 * mm, 24 * mm, 24 * mm, 25 * mm, 25 * mm, 24 * mm],
     )
     items_table.setStyle(
         TableStyle(
@@ -251,7 +254,7 @@ def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Pa
                 ("BOX", (0, 0), (-1, -1), 0.4, GOLD),
                 ("INNERGRID", (0, 0), (-1, -1), 0.25, LINE),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("ALIGN", (3, 1), (-1, -1), "RIGHT"),
+                ("ALIGN", (2, 1), (-1, -1), "RIGHT"),
                 ("LEFTPADDING", (0, 0), (-1, -1), 4),
                 ("RIGHTPADDING", (0, 0), (-1, -1), 4),
                 ("TOPPADDING", (0, 0), (-1, -1), 4),
@@ -265,22 +268,22 @@ def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Pa
     tax_rows = [[Paragraph("Tax Summary", small_bold), Paragraph("", small)]]
     if invoice["tax_type"] == "intra":
         tax_rows += [
-            [Paragraph("CGST", small), Paragraph(format_inr(invoice["total_cgst"]), right)],
-            [Paragraph("SGST", small), Paragraph(format_inr(invoice["total_sgst"]), right)],
+            [Paragraph("CGST", small), Paragraph(format_pdf_currency(invoice["total_cgst"]), right)],
+            [Paragraph("SGST", small), Paragraph(format_pdf_currency(invoice["total_sgst"]), right)],
         ]
     else:
         tax_rows.append(
-            [Paragraph("IGST", small), Paragraph(format_inr(invoice["total_igst"]), right)]
+            [Paragraph("IGST", small), Paragraph(format_pdf_currency(invoice["total_igst"]), right)]
         )
 
     totals_rows = [
-        [Paragraph("Subtotal", small), Paragraph(format_inr(invoice["subtotal"]), right)],
-        [Paragraph("Discount", small), Paragraph(format_inr(invoice["total_discount"]), right)],
-        [Paragraph("Taxable Amount", small), Paragraph(format_inr(invoice["total_taxable"]), right)],
-        [Paragraph("GST", small), Paragraph(format_inr(invoice["total_gst"]), right)],
-        [Paragraph("GRAND TOTAL", small_bold), Paragraph(format_inr(invoice["grand_total"]), right_bold)],
-        [Paragraph("Amount Paid", small), Paragraph(format_inr(invoice["amount_paid"]), right)],
-        [Paragraph("Balance Due", small_bold), Paragraph(format_inr(invoice["balance_due"]), right_bold)],
+        [Paragraph("Subtotal", small), Paragraph(format_pdf_currency(invoice["subtotal"]), right)],
+        [Paragraph("Discount", small), Paragraph(format_pdf_currency(invoice["total_discount"]), right)],
+        [Paragraph("Taxable Amount", small), Paragraph(format_pdf_currency(invoice["total_taxable"]), right)],
+        [Paragraph("GST", small), Paragraph(format_pdf_currency(invoice["total_gst"]), right)],
+        [Paragraph("GRAND TOTAL", small_bold), Paragraph(format_pdf_currency(invoice["grand_total"]), right_bold)],
+        [Paragraph("Amount Paid", small), Paragraph(format_pdf_currency(invoice["amount_paid"]), right)],
+        [Paragraph("Balance Due", small_bold), Paragraph(format_pdf_currency(invoice["balance_due"]), right_bold)],
     ]
 
     bottom = Table(
@@ -298,6 +301,8 @@ def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Pa
     )
     story.append(bottom)
     story.append(Spacer(1, 4 * mm))
+    story.append(Paragraph(f"GSTIN: {escape(gstin_line)}", small))
+    story.append(Spacer(1, 1 * mm))
     story.append(Paragraph(f"Amount in words: <b>{invoice['amount_in_words']}</b>", small))
 
     extra = []
@@ -308,15 +313,32 @@ def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Pa
     if extra:
         story.append(Paragraph(" &nbsp;|&nbsp; ".join(extra), small))
 
-    story.append(Spacer(1, 6 * mm))
-    story.append(Paragraph(business.get("footer_thank_you", ""), center_small))
-    story.append(Paragraph(business.get("tagline", "A scent that lingers."), center_small))
-    story.append(Spacer(1, 4 * mm))
-    story.append(Paragraph("Terms &amp; Conditions", small_bold))
-    story.append(Paragraph(business.get("terms", ""), small))
+    if invoice.get("footer_enabled", True):
+        footer_text = invoice.get("footer_text", business.get("footer_thank_you", ""))
+        tagline = invoice.get("tagline", business.get("tagline", "A scent that lingers."))
+        terms_text = invoice.get("terms_text", business.get("terms", ""))
+        footer_paragraphs = [
+            Paragraph(escape(footer_text), center_small),
+            Paragraph(escape(tagline), center_small),
+        ]
+        if invoice.get("terms_enabled", True):
+            footer_paragraphs.extend([
+                Paragraph("Terms &amp; Conditions", small_bold),
+                Paragraph(escape(terms_text), small),
+            ])
 
     def _footer(canvas, _doc):
         canvas.saveState()
+        footer_y = 14 * mm
+        footer_width = A4[0] - 28 * mm
+        footer_heights = []
+        for paragraph in footer_paragraphs if invoice.get("footer_enabled", True) else []:
+            _, height = paragraph.wrap(footer_width, 30 * mm)
+            footer_heights.append((paragraph, height))
+        y = footer_y + sum(height for _, height in footer_heights) + 2 * mm
+        for paragraph, height in footer_heights:
+            y -= height
+            paragraph.drawOn(canvas, 14 * mm, y)
         canvas.setStrokeColor(GOLD)
         canvas.setLineWidth(1)
         canvas.line(14 * mm, 10 * mm, A4[0] - 14 * mm, 10 * mm)
