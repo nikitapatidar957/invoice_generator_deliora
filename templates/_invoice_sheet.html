@@ -31,28 +31,30 @@
             <p>Tax: {{ 'Intra-State' if invoice.tax_type == 'intra' else 'Inter-State' }}</p>
         </div>
     </section>
-    <table class="sheet-items">
-        <thead>
-            <tr>
-                <th>Sr.</th><th>Product</th><th>Qty</th><th>Rate</th>
-                <th>Discount</th><th>Taxable</th><th>GST</th><th>Total</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in invoice["items"] %}
-            <tr>
-                <td>{{ loop.index }}</td>
-                <td>{{ item.product_name }}</td>
-                <td>{{ item.quantity }}</td>
-                <td>₹{{ '%.2f'|format(item.unit_price) }}</td>
-                <td>₹{{ '%.2f'|format(item.discount_amount) }}</td>
-                <td>₹{{ '%.2f'|format(item.taxable_amount) }}</td>
-                <td>{{ '%.0f'|format(item.gst_rate) }}% ₹{{ '%.2f'|format(item.gst_amount) }}</td>
-                <td>₹{{ '%.2f'|format(item.line_total) }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="sheet-items-scroll">
+        <table class="sheet-items">
+            <thead>
+                <tr>
+                    <th>Sr.</th><th>Product</th><th>Qty</th><th>Rate</th>
+                    <th>Discount</th><th>Taxable</th><th>GST</th><th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in invoice["items"] %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ item.product_name }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>₹{{ '%.2f'|format(item.unit_price) }}</td>
+                    <td>₹{{ '%.2f'|format(item.discount_amount) }}</td>
+                    <td>₹{{ '%.2f'|format(item.taxable_amount) }}</td>
+                    <td>{{ '%.0f'|format(item.gst_rate) }}% ₹{{ '%.2f'|format(item.gst_amount) }}</td>
+                    <td>₹{{ '%.2f'|format(item.line_total) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
     <section class="sheet-bottom">
         <div>
             <h3>Tax Summary</h3>
