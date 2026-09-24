@@ -43,6 +43,8 @@ def calculate():
             payload.get("tax_type") or "intra",
             payload.get("payment_status") or "paid",
             payload.get("amount_paid") or 0,
+            payload.get("previous_due") or 0,
+            bool(payload.get("due_payment_only")),
         )
         totals["amount_in_words"] = amount_in_words(totals["grand_total"])
         return jsonify(totals)

@@ -174,6 +174,7 @@ function toWords(amount) {
 
 function collectState() {
     const items = [...lineBody.querySelectorAll(".line-row")].map(lineCalc);
+    const duePaymentOnly = document.getElementById("transactionType").value === "due_payment";
     const taxType = document.getElementById("taxType").value;
     const status = document.getElementById("paymentStatus").value;
     const method = document.getElementById("paymentMethod").value;
@@ -187,7 +188,8 @@ function collectState() {
     const sgst = taxType === "intra" ? money(totalGst - cgst) : 0;
     const igst = taxType === "inter" ? totalGst : 0;
     let paid = money(document.getElementById("amountPaid").value);
-    if (status === "paid") paid = grand;
+    const previousDue = money(document.getElementById("previousDue").value);
+    if (status === "paid") paid = duePaymentOnly ? previousDue : grand;
     if (status === "unpaid") paid = 0;
     return {
         customer_name: document.getElementById("customerName").value.trim(),
@@ -201,8 +203,11 @@ function collectState() {
         payment_status: status,
         customer_upi_id: document.getElementById("upiId").value.trim(),
         transaction_reference: document.getElementById("txnRef").value.trim(),
+        due_payment_only: duePaymentOnly,
         amount_paid: paid,
-        balance_due: money(grand - paid),
+        previous_due: previousDue,
+        current_balance_due: money(grand - paid),
+        balance_due: money(previousDue + (grand - paid)),
         items: validItems,
         subtotal,
         total_discount: totalDiscount,
@@ -225,9 +230,12 @@ function collectState() {
 function togglePaymentFields() {
     const method = document.getElementById("paymentMethod").value;
     const status = document.getElementById("paymentStatus").value;
+    const duePaymentOnly = document.getElementById("transactionType").value === "due_payment";
+    document.getElementById("productSection").classList.toggle("hidden", duePaymentOnly);
     document.getElementById("upiField").classList.toggle("hidden", method !== "upi");
     document.getElementById("refField").classList.toggle("hidden", !["upi", "bank", "card"].includes(method));
-    document.getElementById("paidField").classList.toggle("hidden", status !== "partial");
+    document.getElementById("paidField").classList.toggle("hidden", status !== "partial" && !duePaymentOnly);
+    document.querySelector("#paidField").childNodes[0].textContent = duePaymentOnly ? "Payment Received" : "Amount Paid";
     const intra = document.getElementById("taxType").value === "intra";
     document.getElementById("cgstRow").classList.toggle("hidden", !intra);
     document.getElementById("sgstRow").classList.toggle("hidden", !intra);
@@ -266,7 +274,7 @@ function renderPreview(state) {
                 <p>${b.phone || ""} · ${b.email || ""} · ${b.website || ""}</p>
             </div>
             <div class="sheet-title">
-                <strong>TAX INVOICE</strong>
+                <strong>${state.due_payment_only ? "DUE PAYMENT RECEIPT" : "TAX INVOICE"}</strong>
                 <p>${state.invoice_number}</p>
                 <p>${state.invoice_date.split("-").reverse().join("/")}</p>
             </div>
@@ -283,6 +291,7 @@ function renderPreview(state) {
                 <h3>Payment</h3>
                 <p>Method: ${state.payment_method}</p>
                 <p>Status: ${state.payment_status}</p>
+                <p>Previous Due: ${formatINR(state.previous_due)}</p>
                 <p>${extra}</p>
                 <p>Tax: ${state.tax_type === "intra" ? "Intra-State (CGST/SGST)" : "Inter-State (IGST)"}</p>
             </div>
@@ -309,6 +318,7 @@ function renderPreview(state) {
                 <p><span>Taxable Amount</span><strong>${formatINR(state.total_taxable)}</strong></p>
                 <p><span>GST</span><strong>${formatINR(state.total_gst)}</strong></p>
                 <p class="grand"><span>GRAND TOTAL</span><strong>${formatINR(state.grand_total)}</strong></p>
+                <p><span>Previous Due</span><strong>${formatINR(state.previous_due)}</strong></p>
                 <p><span>Amount Paid</span><strong>${formatINR(state.amount_paid)}</strong></p>
                 <p><span>Balance Due</span><strong>${formatINR(state.balance_due)}</strong></p>
             </div>
@@ -332,6 +342,7 @@ function recalc() {
     document.getElementById("tIgst").textContent = formatINR(state.total_igst);
     document.getElementById("tGst").textContent = formatINR(state.total_gst);
     document.getElementById("tGrand").textContent = formatINR(state.grand_total);
+    document.getElementById("tPreviousDue").textContent = formatINR(state.previous_due);
     document.getElementById("tPaid").textContent = formatINR(state.amount_paid);
     document.getElementById("tBalance").textContent = formatINR(state.balance_due);
     renderPreview(state);
@@ -343,7 +354,7 @@ function validate(state, { requireCustomer } = { requireCustomer: true }) {
     if (state.customer_gstin && !GSTIN_RE.test(state.customer_gstin)) {
         return "Customer GSTIN format looks invalid. Leave it blank for a regular consumer.";
     }
-    if (!state.items.length) return "Add at least one perfume.";
+    if (!state.items.length && !state.due_payment_only) return "Add at least one perfume.";
     for (const item of state.items) {
         if (item.quantity <= 0) return "Quantity must be greater than zero.";
         if (item.unit_price < 0) return "Unit price cannot be negative.";
@@ -357,12 +368,17 @@ function validate(state, { requireCustomer } = { requireCustomer: true }) {
         if (!state.customer_upi_id) return "Enter the customer UPI ID.";
         if (!UPI_RE.test(state.customer_upi_id)) return "UPI ID format looks invalid. Example: nikita@upi";
     }
-    if (state.payment_status === "partial") {
+    if (state.due_payment_only && state.previous_due <= 0) {
+        return "Enter the outstanding balance before collecting a due payment.";
+    }
+    if (state.payment_status === "partial" || state.due_payment_only) {
         const typed = Number(document.getElementById("amountPaid").value);
         if (typed < 0) return "Amount paid cannot be negative.";
-        if (typed > state.grand_total) return "Amount paid cannot be greater than the invoice total.";
-        if (typed === 0) return "Enter the amount paid for a partially paid invoice.";
+        const maximum = state.due_payment_only ? state.previous_due : state.grand_total;
+        if (typed > maximum) return "Payment cannot be greater than the amount due.";
+        if (typed === 0) return "Enter the payment amount.";
     }
+    if (state.previous_due < 0) return "Previous due cannot be negative.";
     return null;
 }
 

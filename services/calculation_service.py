@@ -87,9 +87,18 @@ def calculate_line(
     }
 
 
-def calculate_invoice(items: list[dict], tax_type: str, payment_status: str, amount_paid) -> dict:
-    if not items:
+def calculate_invoice(
+    items: list[dict],
+    tax_type: str,
+    payment_status: str,
+    amount_paid,
+    previous_due=0,
+    due_payment_only=False,
+) -> dict:
+    if not items and not due_payment_only:
         raise ValueError("Add at least one perfume to the invoice.")
+    if due_payment_only and money(previous_due or 0) <= 0:
+        raise ValueError("Enter the outstanding balance being collected.")
 
     seen = set()
     calculated_items = []
@@ -116,28 +125,32 @@ def calculate_invoice(items: list[dict], tax_type: str, payment_status: str, amo
     total_igst = money(sum(Decimal(str(i["igst_amount"])) for i in calculated_items))
     grand_total = money(total_taxable + total_gst)
 
+    previous = money(previous_due or 0)
+    if previous < 0:
+        raise ValueError("Previous due cannot be negative.")
+
     paid = money(amount_paid or 0)
     if paid < 0:
         raise ValueError("Amount paid cannot be negative.")
 
     status = (payment_status or "").lower()
+    payment_base = previous if due_payment_only else grand_total
     if status == "paid":
-        paid = grand_total
+        paid = payment_base
     elif status == "unpaid":
         paid = money(0)
     elif status == "partial":
         if paid == 0:
             raise ValueError("Enter the amount paid for a partially paid invoice.")
-        if paid > grand_total:
-            raise ValueError("Amount paid cannot be greater than the invoice total.")
-        if paid == grand_total:
+        if paid > payment_base:
+            raise ValueError("Amount paid cannot be greater than the amount due.")
+        if paid == payment_base:
             status = "paid"
     else:
         raise ValueError("Select a valid payment status.")
 
-    balance = money(grand_total - paid)
-    if status == "paid":
-        balance = money(0)
+    current_balance = money(grand_total - paid) if not due_payment_only else money(0)
+    balance = money(previous - paid) if due_payment_only else money(previous + current_balance)
 
     return {
         "items": calculated_items,
@@ -151,6 +164,9 @@ def calculate_invoice(items: list[dict], tax_type: str, payment_status: str, amo
         "grand_total": float(grand_total),
         "payment_status": status,
         "amount_paid": float(paid),
+        "previous_due": float(previous),
+        "current_balance_due": float(current_balance),
         "balance_due": float(balance),
         "tax_type": tax_type,
+        "due_payment_only": bool(due_payment_only),
     }

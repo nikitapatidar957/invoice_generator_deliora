@@ -23,6 +23,7 @@
                     <th>Date</th>
                     <th>Customer</th>
                     <th>Amount</th>
+                    <th>Balance Due</th>
                     <th>Payment Status</th>
                     <th>Actions</th>
                 </tr>
@@ -37,6 +38,7 @@
                         <div class="muted">{{ inv.customer_phone }}</div>
                     </td>
                     <td>₹{{ '%.2f'|format(inv.grand_total) }}</td>
+                    <td>₹{{ '%.2f'|format(inv.get('balance_due', 0)) }}</td>
                     <td><span class="status {{ inv.payment_status }}">{{ inv.payment_status }}</span></td>
                     <td class="row-actions">
                         <a class="btn ghost" href="{{ url_for('history.view_invoice', invoice_id=inv.id) }}">View</a>
@@ -44,7 +46,7 @@
                     </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="6" class="empty">No invoices yet.</td></tr>
+                <tr><td colspan="7" class="empty">No invoices yet.</td></tr>
                 {% endfor %}
             </tbody>
         </table>

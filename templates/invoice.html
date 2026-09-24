@@ -38,10 +38,11 @@
             </label>
         </div>
 
-        <div class="section-split">
+        <div id="productSection">
+            <div class="section-split">
             <h2>Product Selection</h2>
             <button type="button" class="btn ghost" id="addProduct">+ Add Product</button>
-        </div>
+            </div>
         <div class="table-wrap">
             <table class="line-table">
                 <thead>
@@ -61,10 +62,17 @@
                 <tbody id="lineBody"></tbody>
             </table>
         </div>
-        <p class="hint">Default selling price is ₹1,499. Discount % is 0. Use Disc ₹ for a fixed rupee off. The rupee discount is subtracted from selling price × qty, then GST is applied.</p>
+            <p class="hint">Default selling price is ₹1,499. Discount % is 0. Use Disc ₹ for a fixed rupee off. The rupee discount is subtracted from selling price × qty, then GST is applied.</p>
+        </div>
 
         <h2>Payment Details</h2>
         <div class="grid three">
+            <label>Transaction Type
+                <select id="transactionType">
+                    <option value="invoice">New Invoice</option>
+                    <option value="due_payment">Collect Due Payment Only</option>
+                </select>
+            </label>
             <label>Tax Type
                 <select id="taxType">
                     <option value="intra">Intra-State (CGST + SGST)</option>
@@ -95,6 +103,9 @@
             </label>
             <label id="paidField" class="hidden">Amount Paid
                 <input id="amountPaid" type="number" min="0" step="0.01" value="0">
+            </label>
+            <label>Previous Due / Outstanding Balance
+                <input id="previousDue" type="number" min="0" step="0.01" value="0">
             </label>
         </div>
 
@@ -128,6 +139,7 @@
             <div><span>Total GST</span><strong id="tGst">₹0.00</strong></div>
             <hr>
             <div class="grand"><span>GRAND TOTAL</span><strong id="tGrand">₹0.00</strong></div>
+            <div><span>Previous Due</span><strong id="tPreviousDue">₹0.00</strong></div>
             <div><span>Amount Paid</span><strong id="tPaid">₹0.00</strong></div>
             <div><span>Balance Due</span><strong id="tBalance">₹0.00</strong></div>
         </aside>

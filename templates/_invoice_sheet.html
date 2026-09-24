@@ -9,7 +9,7 @@
             <p>{{ b.phone }} · {{ b.email }} · {{ b.website }}</p>
         </div>
         <div class="sheet-title">
-            <strong>TAX INVOICE</strong>
+            <strong>{{ 'DUE PAYMENT RECEIPT' if invoice.get('due_payment_only', false) else 'TAX INVOICE' }}</strong>
             <p>{{ invoice.invoice_number }}</p>
             <p>{{ invoice.invoice_date }}</p>
         </div>
@@ -71,8 +71,9 @@
             <p><span>Taxable</span><strong>₹{{ '%.2f'|format(invoice.total_taxable) }}</strong></p>
             <p><span>GST</span><strong>₹{{ '%.2f'|format(invoice.total_gst) }}</strong></p>
             <p class="grand"><span>GRAND TOTAL</span><strong>₹{{ '%.2f'|format(invoice.grand_total) }}</strong></p>
-            <p><span>Amount Paid</span><strong>₹{{ '%.2f'|format(invoice.amount_paid) }}</strong></p>
-            <p><span>Balance Due</span><strong>₹{{ '%.2f'|format(invoice.balance_due) }}</strong></p>
+            <p><span>Previous Due</span><strong>₹{{ '%.2f'|format(invoice.get('previous_due', 0)) }}</strong></p>
+            <p><span>Amount Paid</span><strong>₹{{ '%.2f'|format(invoice.get('amount_paid', 0)) }}</strong></p>
+            <p><span>Balance Due</span><strong>₹{{ '%.2f'|format(invoice.get('balance_due', 0)) }}</strong></p>
         </div>
     </section>
     {% if invoice.get('footer_enabled', true) %}

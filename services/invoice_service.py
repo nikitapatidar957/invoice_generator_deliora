@@ -144,12 +144,17 @@ def validate_payload(payload: dict) -> None:
         payload["customer_upi_id"] = ""
     if method not in {"upi", "bank", "card"}:
         payload["transaction_reference"] = payload.get("transaction_reference") or ""
+    previous_due = float(payload.get("previous_due") or 0)
+    if previous_due < 0:
+        raise ValueError("Previous due cannot be negative.")
+    payload["previous_due"] = previous_due
+    payload["due_payment_only"] = bool(payload.get("due_payment_only"))
 
 
 def create_invoice(payload: dict) -> dict:
     validate_payload(payload)
     items_in = payload.get("items") or []
-    if not items_in:
+    if not items_in and not payload["due_payment_only"]:
         raise ValueError("Add at least one perfume.")
 
     product_ids = [int(item["product_id"]) for item in items_in]
@@ -181,6 +186,8 @@ def create_invoice(payload: dict) -> dict:
         payload["tax_type"],
         payload.get("payment_status"),
         payload.get("amount_paid") or 0,
+        payload.get("previous_due") or 0,
+        payload["due_payment_only"],
     )
     invoice_date = payload.get("invoice_date") or datetime.now().strftime("%Y-%m-%d")
     created_at = datetime.now().isoformat(timespec="seconds")
@@ -189,6 +196,7 @@ def create_invoice(payload: dict) -> dict:
         "_id": invoice_id,
         "id": invoice_id,
         "invoice_number": None,
+        "due_payment_only": totals["due_payment_only"],
         "invoice_date": invoice_date,
         "customer_name": payload["customer_name"].strip(),
         "customer_phone": (payload.get("customer_phone") or "").strip(),
@@ -201,6 +209,7 @@ def create_invoice(payload: dict) -> dict:
         "customer_upi_id": (payload.get("customer_upi_id") or "").strip(),
         "transaction_reference": (payload.get("transaction_reference") or "").strip(),
         "amount_paid": totals["amount_paid"],
+        "previous_due": totals["previous_due"],
         "balance_due": totals["balance_due"],
         "subtotal": totals["subtotal"],
         "total_discount": totals["total_discount"],

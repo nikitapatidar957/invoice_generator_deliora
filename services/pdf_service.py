@@ -150,7 +150,10 @@ def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Pa
         Paragraph(f"Website: {business.get('website', '')}", muted),
     ]
     header = Table(
-        [[logo_cell, seller_lines, Paragraph("TAX INVOICE", heading)]],
+        [[logo_cell, seller_lines, Paragraph(
+            "DUE PAYMENT RECEIPT" if invoice.get("due_payment_only", False) else "TAX INVOICE",
+            heading,
+        )]],
         colWidths=[32 * mm, 105 * mm, 45 * mm],
     )
     header.setStyle(
@@ -191,7 +194,9 @@ def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Pa
                     f"Invoice Date: {invoice_dt}<br/>"
                     f"Tax Type: {_tax_label(invoice['tax_type'])}<br/>"
                     f"Payment: {_payment_label(invoice['payment_method'])}<br/>"
-                    f"Status: {invoice['payment_status'].replace('partial', 'Partially Paid').title()}",
+                    f"Status: {invoice['payment_status'].replace('partial', 'Partially Paid').title()}<br/>"
+                    f"Type: {'Due Payment Only' if invoice.get('due_payment_only', False) else 'New Invoice'}<br/>"
+                    f"Previous Due: {format_pdf_currency(invoice.get('previous_due', 0))}",
                     small,
                 ),
             ],
@@ -282,6 +287,7 @@ def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Pa
         [Paragraph("Taxable Amount", small), Paragraph(format_pdf_currency(invoice["total_taxable"]), right)],
         [Paragraph("GST", small), Paragraph(format_pdf_currency(invoice["total_gst"]), right)],
         [Paragraph("GRAND TOTAL", small_bold), Paragraph(format_pdf_currency(invoice["grand_total"]), right_bold)],
+        [Paragraph("Previous Due", small), Paragraph(format_pdf_currency(invoice.get("previous_due", 0)), right)],
         [Paragraph("Amount Paid", small), Paragraph(format_pdf_currency(invoice["amount_paid"]), right)],
         [Paragraph("Balance Due", small_bold), Paragraph(format_pdf_currency(invoice["balance_due"]), right_bold)],
     ]

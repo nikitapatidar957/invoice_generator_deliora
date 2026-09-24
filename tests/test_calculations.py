@@ -52,6 +52,23 @@ class CalculationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             calculate_invoice(items, "intra", "partial", 99999)
 
+    def test_previous_due_is_added_to_balance_due(self):
+        items = [{"product_id": 1, "quantity": 1, "unit_price": 1499, "gst_rate": 18}]
+        totals = calculate_invoice(items, "intra", "partial", 1000, previous_due=2500)
+        self.assertEqual(totals["grand_total"], 1768.82)
+        self.assertEqual(totals["amount_paid"], 1000.00)
+        self.assertEqual(totals["current_balance_due"], 768.82)
+        self.assertEqual(totals["balance_due"], 3268.82)
+        self.assertEqual(totals["previous_due"], 2500.00)
+
+    def test_due_payment_only_reduces_previous_due(self):
+        totals = calculate_invoice([], "intra", "partial", 1000, previous_due=2500, due_payment_only=True)
+        self.assertEqual(totals["grand_total"], 0.00)
+        self.assertEqual(totals["amount_paid"], 1000.00)
+        self.assertEqual(totals["current_balance_due"], 0.00)
+        self.assertEqual(totals["balance_due"], 1500.00)
+        self.assertEqual(totals["payment_status"], "partial")
+
     def test_indian_words_and_currency(self):
         self.assertEqual(amount_in_words(5310), "Rupees Five Thousand Three Hundred Ten Only")
         self.assertEqual(format_inr(5310), "₹5,310.00")
