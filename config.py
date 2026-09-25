@@ -7,8 +7,8 @@ BASE_DIR = Path(__file__).resolve().parent
 load_dotenv(BASE_DIR / ".env")
 
 BUSINESS_CONFIG = {
-    "business_name": os.getenv("BUSINESS_NAME", "DeLiora Essence by Patidar"),
-    "brand_name": os.getenv("BRAND_NAME", "DeLiora Essence by Patidar"),
+    "business_name": os.getenv("BUSINESS_NAME", "Rudhi Cosmetics"),
+    "brand_name": os.getenv("BRAND_NAME", "Rudhi Cosmetics"),
     "address": os.getenv("BUSINESS_ADDRESS", "[Business Address — configure in .env]"),
     "gstin": os.getenv("BUSINESS_GSTIN", "[GSTIN — configure in .env]"),
     "phone": os.getenv("BUSINESS_PHONE", "[Phone — configure in .env]"),
@@ -28,7 +28,7 @@ TERMS_AND_CONDITIONS = os.getenv(
 
 INVOICE_FOOTER_THANK_YOU = os.getenv(
     "INVOICE_FOOTER_THANK_YOU",
-    "Thank you for choosing DeLiora Essence by Patidar.",
+    "Thank you for choosing Rudhi Cosmetics.",
 )
 
 INVOICE_TAGLINE = os.getenv("INVOICE_TAGLINE", "A scent that lingers.")
@@ -36,6 +36,9 @@ INVOICE_TAGLINE = os.getenv("INVOICE_TAGLINE", "A scent that lingers.")
 # Placeholder default — each product stores its own rate in MongoDB Atlas.
 DEFAULT_GST_RATE = float(os.getenv("DEFAULT_GST_RATE", "18"))
 DEFAULT_PRODUCT_PRICE = float(os.getenv("DEFAULT_PRODUCT_PRICE", "1499"))
+DEFAULT_PTR = float(os.getenv("DEFAULT_PTR", "984"))
+DEFAULT_PTR_PERCENT = float(os.getenv("DEFAULT_PTR_PERCENT", "34.36"))
+DEFAULT_SCHEME_DISCOUNT = float(os.getenv("DEFAULT_SCHEME_DISCOUNT", "35.5"))
 DEFAULT_HSN = os.getenv("DEFAULT_HSN", "3303")
 DEFAULT_SIZE = os.getenv("DEFAULT_SIZE", "100 ml")
 

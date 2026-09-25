@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}DeLiora Invoice{% endblock %}</title>
+    <title>{% block title %}Rudhi Cosmetics Invoice{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
@@ -11,7 +11,7 @@
         <a class="brand" href="{{ url_for('invoice.create_page') }}">
             <img src="{{ url_for('static', filename='images/deliora-logo.png') }}" alt="DeLiora logo">
             <div>
-                <strong>{{ business.business_name or 'DeLiora Essence by Patidar' }}</strong>
+                <strong>{{ business.business_name or 'Rudhi Cosmetics' }}</strong>
                 <span>Offline Invoice</span>
             </div>
         </a>

@@ -61,7 +61,7 @@ def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Pa
         topMargin=12 * mm,
         bottomMargin=42 * mm,
         title=invoice["invoice_number"],
-        author=invoice["business"].get("business_name", "DeLiora"),
+        author=invoice["business"].get("business_name", "Rudhi Cosmetics"),
     )
 
     styles = getSampleStyleSheet()
@@ -136,18 +136,18 @@ def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Pa
         logo_cell = Image(str(logo_file), width=28 * mm, height=28 * mm)
 
     seller_lines = [
-        Paragraph(business.get("business_name", "DeLiora Essence by Patidar"), brand),
+        Paragraph(business.get("business_name", "Rudhi Cosmetics"), brand),
         Paragraph(business.get("address", ""), muted),
-        Paragraph(
-            f"State: {business.get('state', '')} "
-            f"({business.get('state_code', '')})",
-            muted,
-        ),
         Paragraph(
             f"Phone: {business.get('phone', '')} &nbsp;&nbsp; Email: {business.get('email', '')}",
             muted,
         ),
         Paragraph(f"Website: {business.get('website', '')}", muted),
+        Paragraph(
+            f"GSTIN: {business.get('gstin', '23EOUPP3879A1ZI')} &nbsp;&nbsp;"
+            f"{business.get('state', '').strip()} ({business.get('state_code', '')})",
+            muted,
+        ),
     ]
     header = Table(
         [[logo_cell, seller_lines, Paragraph(
@@ -172,7 +172,7 @@ def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Pa
     story.append(header)
     story.append(Spacer(1, 6 * mm))
 
-    gstin_line = invoice["customer_gstin"] or business.get("gstin", "")
+    gstin_line = invoice["customer_gstin"]
     invoice_dt = _format_date(invoice["invoice_date"])
     meta = Table(
         [
@@ -185,8 +185,8 @@ def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Pa
                     f"<b>{invoice['customer_name']}</b><br/>"
                     f"{invoice['customer_phone']}<br/>"
                     f"{invoice['customer_email']}<br/>"
-                    f"{invoice['customer_address']}<br/>"
-                    f"GSTIN: {gstin_line}",
+                    f"{invoice['customer_address']}"
+                    f"{f'<br/>GSTIN: {gstin_line}' if gstin_line else ''}",
                     small,
                 ),
                 Paragraph(
@@ -223,34 +223,35 @@ def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Pa
     story.append(Spacer(1, 5 * mm))
 
     table_header = [
-        Paragraph("Sr.", small_bold),
+        Paragraph("Sl. No.", small_bold),
         Paragraph("Product", small_bold),
-        Paragraph("Qty", small_bold),
-        Paragraph("Rate", small_bold),
-        Paragraph("Discount", small_bold),
-        Paragraph("Taxable", small_bold),
-        Paragraph("GST", small_bold),
-        Paragraph("Total", small_bold),
+        Paragraph("HSN/SAC", small_bold),
+        Paragraph("MRP/Marginal", small_bold),
+        Paragraph("Quantity", small_bold),
+        Paragraph("PTR/Rate", small_bold),
+        Paragraph("Per", small_bold),
+        Paragraph("Scheme Disc. %", small_bold),
+        Paragraph("Amount", small_bold),
     ]
     rows = [table_header]
     for idx, item in enumerate(invoice["items"], start=1):
-        gst_cell = f"{item['gst_rate']:.0f}% {format_pdf_currency(item['gst_amount'])}"
         rows.append(
             [
                 Paragraph(str(idx), small),
                 Paragraph(item["product_name"], small),
-                Paragraph(str(item["quantity"]), small),
-                Paragraph(format_pdf_currency(item["unit_price"]), small),
-                Paragraph(format_pdf_currency(item["discount_amount"]), small),
+                Paragraph(item.get("hsn_sac", ""), small),
+                Paragraph(f"{format_pdf_currency(item['unit_price'])}/PCS", small),
+                Paragraph(f"{item['quantity']} PCS", small),
+                Paragraph(f"{format_pdf_currency(item.get('ptr', 984))}/PCS", small),
+                Paragraph("PCS", small),
+                Paragraph(f"{item['discount_percent']:.2f}%", small),
                 Paragraph(format_pdf_currency(item["taxable_amount"]), small),
-                Paragraph(gst_cell, small),
-                Paragraph(format_pdf_currency(item["line_total"]), small),
             ]
         )
 
     items_table = Table(
         rows,
-        colWidths=[12 * mm, 42 * mm, 14 * mm, 24 * mm, 24 * mm, 25 * mm, 25 * mm, 24 * mm],
+        colWidths=[10 * mm, 34 * mm, 18 * mm, 25 * mm, 18 * mm, 25 * mm, 12 * mm, 25 * mm, 25 * mm],
     )
     items_table.setStyle(
         TableStyle(
@@ -273,8 +274,8 @@ def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Pa
     tax_rows = [[Paragraph("Tax Summary", small_bold), Paragraph("", small)]]
     if invoice["tax_type"] == "intra":
         tax_rows += [
-            [Paragraph("CGST", small), Paragraph(format_pdf_currency(invoice["total_cgst"]), right)],
-            [Paragraph("SGST", small), Paragraph(format_pdf_currency(invoice["total_sgst"]), right)],
+            [Paragraph("CGST (9%)", small), Paragraph(format_pdf_currency(invoice["total_cgst"]), right)],
+            [Paragraph("SGST (9%)", small), Paragraph(format_pdf_currency(invoice["total_sgst"]), right)],
         ]
     else:
         tax_rows.append(
@@ -283,9 +284,9 @@ def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Pa
 
     totals_rows = [
         [Paragraph("Subtotal", small), Paragraph(format_pdf_currency(invoice["subtotal"]), right)],
-        [Paragraph("Discount", small), Paragraph(format_pdf_currency(invoice["total_discount"]), right)],
+        [Paragraph("Round-off", small), Paragraph(format_pdf_currency(0), right)],
         [Paragraph("Taxable Amount", small), Paragraph(format_pdf_currency(invoice["total_taxable"]), right)],
-        [Paragraph("GST", small), Paragraph(format_pdf_currency(invoice["total_gst"]), right)],
+        [Paragraph("GST (18%)", small), Paragraph(format_pdf_currency(invoice["total_gst"]), right)],
         [Paragraph("GRAND TOTAL", small_bold), Paragraph(format_pdf_currency(invoice["grand_total"]), right_bold)],
         [Paragraph("Previous Due", small), Paragraph(format_pdf_currency(invoice.get("previous_due", 0)), right)],
         [Paragraph("Amount Paid", small), Paragraph(format_pdf_currency(invoice["amount_paid"]), right)],
@@ -350,7 +351,7 @@ def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Pa
         canvas.line(14 * mm, 10 * mm, A4[0] - 14 * mm, 10 * mm)
         canvas.setFont(PDF_FONT, 8)
         canvas.setFillColor(BURGUNDY)
-        canvas.drawString(14 * mm, 6 * mm, "DeLiora Essence by Patidar")
+        canvas.drawString(14 * mm, 6 * mm, "Rudhi Cosmetics")
         canvas.drawRightString(A4[0] - 14 * mm, 6 * mm, f"Page {canvas.getPageNumber()}")
         canvas.restoreState()
 

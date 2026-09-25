@@ -5,8 +5,8 @@
         <div>
             <h2>{{ b.business_name }}</h2>
             <p>{{ b.address }}</p>
-            <p>{{ b.state }} ({{ b.state_code }})</p>
             <p>{{ b.phone }} · {{ b.email }} · {{ b.website }}</p>
+            <p>GSTIN: {{ b.gstin }} · {{ b.state | trim }} ({{ b.state_code }})</p>
         </div>
         <div class="sheet-title">
             <strong>INVOICE</strong>
@@ -18,6 +18,7 @@
         <div>
             <h3>Bill To</h3>
             <p><strong>{{ invoice.customer_name }}</strong></p>
+            {% if invoice.customer_gstin %}<p>GSTIN: {{ invoice.customer_gstin }}</p>{% endif %}
             <p>{{ invoice.customer_phone }}</p>
             <p>{{ invoice.customer_email }}</p>
             <p>{{ invoice.customer_address }}</p>
@@ -35,8 +36,8 @@
         <table class="sheet-items">
             <thead>
                 <tr>
-                    <th>Sr.</th><th>Product</th><th>Qty</th><th>Rate</th>
-                    <th>Discount</th><th>Taxable</th><th>GST</th><th>Total</th>
+                    <th>Sl. No.</th><th>Product</th><th>HSN/SAC</th><th>MRP/Marginal</th>
+                    <th>Quantity</th><th>PTR/Rate</th><th>Per</th><th>Scheme Disc. %</th><th>Amount</th>
                 </tr>
             </thead>
             <tbody>
@@ -44,12 +45,13 @@
                 <tr>
                     <td>{{ loop.index }}</td>
                     <td>{{ item.product_name }}</td>
-                    <td>{{ item.quantity }}</td>
-                    <td>₹{{ '%.2f'|format(item.unit_price) }}</td>
-                    <td>₹{{ '%.2f'|format(item.discount_amount) }}</td>
+                    <td>{{ item.hsn_sac }}</td>
+                    <td>₹{{ '%.2f'|format(item.unit_price) }}/PCS</td>
+                    <td>{{ item.quantity }} PCS</td>
+                    <td>₹{{ '%.2f'|format(item.get('ptr', 984)) }}/PCS</td>
+                    <td>PCS</td>
+                    <td>{{ '%.2f'|format(item.discount_percent) }}%</td>
                     <td>₹{{ '%.2f'|format(item.taxable_amount) }}</td>
-                    <td>{{ '%.0f'|format(item.gst_rate) }}% ₹{{ '%.2f'|format(item.gst_amount) }}</td>
-                    <td>₹{{ '%.2f'|format(item.line_total) }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -59,19 +61,18 @@
         <div>
             <h3>Tax Summary</h3>
             {% if invoice.tax_type == 'intra' %}
-            <p>CGST {{ '%.2f'|format(invoice.total_cgst) }}</p>
-            <p>SGST {{ '%.2f'|format(invoice.total_sgst) }}</p>
+            <p>CGST (9%) {{ '%.2f'|format(invoice.total_cgst) }}</p>
+            <p>SGST (9%) {{ '%.2f'|format(invoice.total_sgst) }}</p>
             {% else %}
             <p>IGST {{ '%.2f'|format(invoice.total_igst) }}</p>
             {% endif %}
-            <p>GSTIN: {{ invoice.customer_gstin or b.gstin }}</p>
             <p class="words">Amount in words: {{ invoice.amount_in_words }}</p>
         </div>
         <div class="sheet-totals">
             <p><span>Subtotal</span><strong>₹{{ '%.2f'|format(invoice.subtotal) }}</strong></p>
-            <p><span>Discount</span><strong>₹{{ '%.2f'|format(invoice.total_discount) }}</strong></p>
-            <p><span>Taxable</span><strong>₹{{ '%.2f'|format(invoice.total_taxable) }}</strong></p>
-            <p><span>GST</span><strong>₹{{ '%.2f'|format(invoice.total_gst) }}</strong></p>
+            <p><span>Round-off</span><strong>₹0.00</strong></p>
+            <p><span>Taxable Amount</span><strong>₹{{ '%.2f'|format(invoice.total_taxable) }}</strong></p>
+            <p><span>GST (18%)</span><strong>₹{{ '%.2f'|format(invoice.total_gst) }}</strong></p>
             <p class="grand"><span>GRAND TOTAL</span><strong>₹{{ '%.2f'|format(invoice.grand_total) }}</strong></p>
             <p><span>Previous Due</span><strong>₹{{ '%.2f'|format(invoice.get('previous_due', 0)) }}</strong></p>
             <p><span>Amount Paid</span><strong>₹{{ '%.2f'|format(invoice.get('amount_paid', 0)) }}</strong></p>

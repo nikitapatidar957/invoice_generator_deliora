@@ -12,12 +12,33 @@ function rowPayload(row) {
         sku: row.querySelector(".sku").value.trim(),
         size: row.querySelector(".size").value.trim(),
         price: row.querySelector(".price").value,
+        ptr: row.querySelector(".ptr").value,
+        ptr_percent: row.querySelector(".ptr-percent").value,
         gst_rate: row.querySelector(".gst").value,
+        scheme_discount: row.querySelector(".scheme-discount").value,
         hsn_sac: row.querySelector(".hsn").value.trim(),
         available_quantity: row.querySelector(".qty").value,
         is_active: true,
     };
 }
+
+function updatePtrFromPercent(row) {
+    const mrp = Number(row.querySelector(".price").value) || 0;
+    const percent = Number(row.querySelector(".ptr-percent").value) || 0;
+    row.querySelector(".ptr").value = (mrp - mrp * percent / 100).toFixed(2);
+}
+
+function updatePercentFromPtr(row) {
+    const mrp = Number(row.querySelector(".price").value) || 0;
+    const ptr = Number(row.querySelector(".ptr").value) || 0;
+    row.querySelector(".ptr-percent").value = mrp ? ((mrp - ptr) / mrp * 100).toFixed(2) : "0.00";
+}
+
+document.querySelectorAll("#productTable tr[data-id]").forEach((row) => {
+    row.querySelector(".price").addEventListener("input", () => updatePtrFromPercent(row));
+    row.querySelector(".ptr-percent").addEventListener("input", () => updatePtrFromPercent(row));
+    row.querySelector(".ptr").addEventListener("input", () => updatePercentFromPtr(row));
+});
 
 document.getElementById("productTable").addEventListener("click", async (event) => {
     const row = event.target.closest("tr");
@@ -60,7 +81,9 @@ document.getElementById("newProduct").addEventListener("click", async () => {
                 sku,
                 size: "100 ml",
                 price: 1499,
+                ptr_percent: 34.36,
                 gst_rate: 18,
+                scheme_discount: 35.5,
                 hsn_sac: "3303",
                 available_quantity: 0,
             }),

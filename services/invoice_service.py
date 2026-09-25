@@ -4,7 +4,7 @@ from datetime import datetime
 from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError
 
-from config import INVOICE_PREFIX
+from config import DEFAULT_PTR_PERCENT, DEFAULT_SCHEME_DISCOUNT, INVOICE_PREFIX
 from database.db import get_collection, get_database, next_id
 from services.calculation_service import calculate_invoice
 from services.number_to_words import amount_in_words
@@ -56,10 +56,17 @@ def save_product(data: dict, product_id: int | None = None) -> dict:
     if not sku:
         raise ValueError("SKU is required.")
     price = float(data.get("price", 0))
+    ptr_percent = float(data.get("ptr_percent", DEFAULT_PTR_PERCENT))
+    ptr = price - (price * ptr_percent / 100)
+    scheme_discount = float(data.get("scheme_discount", DEFAULT_SCHEME_DISCOUNT))
     gst_rate = float(data.get("gst_rate", 0))
     qty = int(data.get("available_quantity", 0))
     if price < 0:
         raise ValueError("Price cannot be negative.")
+    if not 0 <= ptr_percent <= 100:
+        raise ValueError("PTR percentage must be between 0 and 100%.")
+    if not 0 <= scheme_discount <= 100:
+        raise ValueError("Scheme discount must be between 0 and 100%.")
     if gst_rate < 0:
         raise ValueError("GST rate cannot be negative.")
     if qty < 0:
@@ -71,6 +78,9 @@ def save_product(data: dict, product_id: int | None = None) -> dict:
         "sku": sku,
         "size": (data.get("size") or "").strip(),
         "price": price,
+        "ptr": ptr,
+        "ptr_percent": ptr_percent,
+        "scheme_discount": scheme_discount,
         "gst_rate": gst_rate,
         "hsn_sac": (data.get("hsn_sac") or "").strip(),
         "available_quantity": qty,
@@ -175,8 +185,10 @@ def create_invoice(payload: dict) -> dict:
             "sku": product["sku"],
             "hsn_sac": product["hsn_sac"],
             "quantity": int(item["quantity"]),
-            "unit_price": float(item.get("unit_price", product["price"])),
-            "discount_percent": float(item.get("discount_percent") or 0),
+            "unit_price": float(product["price"]),
+            "ptr": float(product.get("ptr", product["price"] - product["price"] * product.get("ptr_percent", DEFAULT_PTR_PERCENT) / 100)),
+            "ptr_percent": float(product.get("ptr_percent", DEFAULT_PTR_PERCENT)),
+            "discount_percent": float(item.get("discount_percent", product.get("scheme_discount", DEFAULT_SCHEME_DISCOUNT))),
             "discount_fixed": float(item.get("discount_fixed") or 0),
             "gst_rate": float(item.get("gst_rate", product["gst_rate"])),
         })
@@ -188,6 +200,7 @@ def create_invoice(payload: dict) -> dict:
         payload.get("amount_paid") or 0,
         payload.get("previous_due") or 0,
         payload["due_payment_only"],
+        False,
     )
     invoice_date = payload.get("invoice_date") or datetime.now().strftime("%Y-%m-%d")
     created_at = datetime.now().isoformat(timespec="seconds")

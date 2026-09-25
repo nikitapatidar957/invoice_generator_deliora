@@ -33,6 +33,8 @@ def calculate_line(
     discount_fixed,
     gst_rate,
     tax_type,
+    inclusive_gst=False,
+    calculation_price=None,
 ) -> dict:
     qty = Decimal(str(quantity))
     price = money(unit_price)
@@ -51,13 +53,15 @@ def calculate_line(
     if rate < 0:
         raise ValueError("GST rate cannot be negative.")
 
-    gross = money(qty * price)
+    base_price = money(calculation_price if calculation_price is not None else price)
+    gross = money(qty * base_price)
     percent_discount = money(gross * percent / Decimal("100"))
     discount_amount = money(percent_discount + fixed)
     if discount_amount > gross:
         raise ValueError("Discount cannot be greater than the line amount.")
 
-    taxable = money(gross - discount_amount)
+    net_amount = money(gross - discount_amount)
+    taxable = net_amount
     gst_amount = money(taxable * rate / Decimal("100"))
     line_total = money(taxable + gst_amount)
 
@@ -94,6 +98,7 @@ def calculate_invoice(
     amount_paid,
     previous_due=0,
     due_payment_only=False,
+    inclusive_gst=False,
 ) -> dict:
     if not items and not due_payment_only:
         raise ValueError("Add at least one perfume to the invoice.")
@@ -114,6 +119,8 @@ def calculate_invoice(
             item.get("discount_fixed", 0),
             item["gst_rate"],
             tax_type,
+            inclusive_gst,
+            item.get("ptr"),
         )})
 
     subtotal = money(sum(Decimal(str(i["gross_amount"])) for i in calculated_items))

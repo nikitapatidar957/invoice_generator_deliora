@@ -3,7 +3,7 @@
 {% block content %}
 <section class="page-head">
     <div>
-        <p class="eyebrow">DeLiora Essence by Patidar</p>
+        <p class="eyebrow">Rudhi Cosmetics</p>
         <h1>Create New Invoice</h1>
         <p class="lede">Enter the customer, add perfumes, and the live preview on the right updates as you type.</p>
     </div>
@@ -48,21 +48,20 @@
                 <thead>
                     <tr>
                         <th>Product</th>
+                        <th>HSN/SAC</th>
+                        <th>MRP/Marginal</th>
                         <th>Qty</th>
-                        <th>Selling Price</th>
-                        <th>Disc %</th>
-                        <th>Disc ₹</th>
-                        <th>GST %</th>
-                        <th>Taxable</th>
-                        <th>GST Amt</th>
-                        <th>Total</th>
+                        <th>PTR/Rate</th>
+                        <th>Per</th>
+                        <th>Scheme Disc. %</th>
+                        <th>Amount</th>
                         <th></th>
                     </tr>
                 </thead>
                 <tbody id="lineBody"></tbody>
             </table>
         </div>
-            <p class="hint">Default selling price is ₹1,499. Discount % is 0. Use Disc ₹ for a fixed rupee off. The rupee discount is subtracted from selling price × qty, then GST is applied.</p>
+            <p class="hint">MRP is ₹1,499. PTR is ₹984. Scheme discount is 35.50%.</p>
         </div>
 
         <h2>Payment Details</h2>
@@ -75,7 +74,7 @@
             </label>
             <label>Tax Type
                 <select id="taxType">
-                    <option value="intra">Intra-State (CGST + SGST)</option>
+                    <option value="intra">Intra-State (CGST (9%) + SGST (9%))</option>
                     <option value="inter">Inter-State (IGST)</option>
                 </select>
             </label>
@@ -130,13 +129,12 @@
 
         <aside class="totals">
             <div><span>Subtotal</span><strong id="tSubtotal">₹0.00</strong></div>
-            <div><span>Discount</span><strong id="tDiscount">₹0.00</strong></div>
             <hr>
             <div><span>Taxable Amount</span><strong id="tTaxable">₹0.00</strong></div>
-            <div id="cgstRow"><span>CGST</span><strong id="tCgst">₹0.00</strong></div>
-            <div id="sgstRow"><span>SGST</span><strong id="tSgst">₹0.00</strong></div>
+            <div id="cgstRow"><span>CGST (9%)</span><strong id="tCgst">₹0.00</strong></div>
+            <div id="sgstRow"><span>SGST (9%)</span><strong id="tSgst">₹0.00</strong></div>
             <div id="igstRow" class="hidden"><span>IGST</span><strong id="tIgst">₹0.00</strong></div>
-            <div><span>Total GST</span><strong id="tGst">₹0.00</strong></div>
+            <div><span>GST (18%)</span><strong id="tGst">₹0.00</strong></div>
             <hr>
             <div class="grand"><span>GRAND TOTAL</span><strong id="tGrand">₹0.00</strong></div>
             <div><span>Previous Due</span><strong id="tPreviousDue">₹0.00</strong></div>
@@ -163,14 +161,13 @@
         <td>
             <select class="product-select"></select>
         </td>
-        <td><input class="qty" type="number" min="1" step="1" value="1"></td>
+        <td class="hsn"></td>
         <td><input class="price" type="number" min="0" step="0.01"></td>
-        <td><input class="disc-pct" type="number" min="0" step="0.01" value="0"></td>
-        <td><input class="disc-fix" type="number" min="0" step="0.01" value="0"></td>
-        <td><input class="gst" type="number" min="0" step="0.01"></td>
+        <td><input class="qty" type="number" min="1" step="1" value="1"></td>
+        <td class="ptr">₹984.00</td>
+        <td class="per">PCS</td>
+        <td><input class="disc-pct" type="number" min="0" max="100" step="0.01" value="35.50"></td>
         <td class="num taxable">₹0.00</td>
-        <td class="num gst-amt">₹0.00</td>
-        <td class="num line-total">₹0.00</td>
         <td><button type="button" class="icon-btn remove" title="Remove">×</button></td>
     </tr>
 </template>

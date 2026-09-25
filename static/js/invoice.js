@@ -50,6 +50,8 @@ function fillProductOptions(select, keepId) {
             opt.value = p.id;
             opt.textContent = p.name;
             opt.dataset.price = p.price;
+            opt.dataset.ptrPercent = p.ptr_percent || 34.36;
+            opt.dataset.schemeDiscount = p.scheme_discount || 35.5;
             opt.dataset.gst = p.gst_rate;
             opt.dataset.sku = p.sku;
             opt.dataset.hsn = p.hsn_sac || "";
@@ -68,10 +70,11 @@ function addRow(prefillId) {
     const select = row.querySelector(".product-select");
     fillProductOptions(select, prefillId || "");
     row.querySelector(".price").value = "1499.00";
+    row.dataset.ptrPercent = "34.36";
+    row.dataset.schemeDiscount = "35.5";
     row.querySelector(".price").addEventListener("input", () => {
         row.querySelector(".price").dataset.touched = "1";
     });
-    row.querySelector(".gst").value = products[0] ? products[0].gst_rate : 18;
     row.querySelector(".remove").addEventListener("click", () => {
         row.remove();
         refreshProductOptions();
@@ -98,9 +101,15 @@ function onProductChange(row, select) {
     const chosen = products.find((p) => String(p.id) === select.value);
     if (!chosen) return;
     const price = row.querySelector(".price");
-    const gst = row.querySelector(".gst");
     if (!price.dataset.touched) price.value = Number(chosen.price).toFixed(2);
-    gst.value = chosen.gst_rate;
+    const ptrPercent = Number(chosen.ptr_percent || 34.36);
+    const ptr = money(Number(chosen.price) - Number(chosen.price) * ptrPercent / 100);
+    row.querySelector(".ptr").textContent = formatINR(ptr);
+    row.querySelector(".hsn").textContent = chosen.hsn_sac || "";
+    row.querySelector(".disc-pct").value = Number(chosen.scheme_discount || 35.5).toFixed(2);
+    row.dataset.ptr = String(ptr);
+    row.dataset.ptrPercent = String(ptrPercent);
+    row.dataset.schemeDiscount = String(chosen.scheme_discount || 35.5);
     refreshProductOptions();
 }
 
@@ -113,17 +122,18 @@ function refreshProductOptions() {
 function lineCalc(row) {
     const qty = Number(row.querySelector(".qty").value);
     const price = Number(row.querySelector(".price").value);
-    const pct = Number(row.querySelector(".disc-pct").value) || 0;
-    const fixed = Number(row.querySelector(".disc-fix").value) || 0;
-    const gst = Number(row.querySelector(".gst").value) || 0;
-    const gross = money(qty * price);
+    const pctInput = row.querySelector(".disc-pct");
+    const pct = Number(pctInput.value) || 0;
+    const fixed = 0;
+    const gst = 18;
+    const ptr = Number(row.dataset.ptr || 984);
+    const gross = money(qty * ptr);
     const discount = money(gross * pct / 100 + fixed);
-    const taxable = money(Math.max(gross - discount, 0));
+    const netAmount = money(Math.max(gross - discount, 0));
+    const taxable = netAmount;
     const gstAmt = money(taxable * gst / 100);
     const total = money(taxable + gstAmt);
     row.querySelector(".taxable").textContent = formatINR(taxable);
-    row.querySelector(".gst-amt").textContent = formatINR(gstAmt);
-    row.querySelector(".line-total").textContent = formatINR(total);
     const select = row.querySelector(".product-select");
     const opt = select.selectedOptions[0];
     return {
@@ -133,6 +143,7 @@ function lineCalc(row) {
         hsn_sac: opt ? opt.dataset.hsn : "",
         quantity: qty,
         unit_price: price,
+        ptr,
         discount_percent: pct,
         discount_fixed: fixed,
         discount_amount: discount,
@@ -179,7 +190,7 @@ function collectState() {
     const status = document.getElementById("paymentStatus").value;
     const method = document.getElementById("paymentMethod").value;
     const validItems = items.filter((i) => i.product_id);
-    const subtotal = money(validItems.reduce((s, i) => s + i.quantity * i.unit_price, 0));
+    const subtotal = money(validItems.reduce((s, i) => s + i.quantity * i.ptr, 0));
     const totalDiscount = money(validItems.reduce((s, i) => s + i.discount_amount, 0));
     const totalTaxable = money(validItems.reduce((s, i) => s + i.taxable_amount, 0));
     const totalGst = money(validItems.reduce((s, i) => s + i.gst_amount, 0));
@@ -224,6 +235,7 @@ function collectState() {
         tagline: document.getElementById("taglineText").value.trim(),
         terms_enabled: document.getElementById("termsEnabled").checked,
         terms_text: document.getElementById("termsText").value.trim(),
+        gst_inclusive: true,
     };
 }
 
@@ -246,7 +258,7 @@ function renderPreview(state) {
     const b = business;
     const gstin = state.customer_gstin || "Unregistered / Consumer";
     const taxRows = state.tax_type === "intra"
-        ? `<p>CGST ${formatINR(state.total_cgst)}</p><p>SGST ${formatINR(state.total_sgst)}</p>`
+        ? `<p>CGST (9%) ${formatINR(state.total_cgst)}</p><p>SGST (9%) ${formatINR(state.total_sgst)}</p>`
         : `<p>IGST ${formatINR(state.total_igst)}</p>`;
     const itemRows = state.items.map((item, i) => `
         <tr>
@@ -254,24 +266,27 @@ function renderPreview(state) {
             <td>${item.product_name}</td>
             <td>${item.quantity}</td>
             <td>${formatINR(item.unit_price)}</td>
-            <td>${formatINR(item.discount_amount)}</td>
+            <td>${item.hsn_sac}</td>
+            <td>${formatINR(item.unit_price)}/PCS</td>
+            <td>${item.quantity} PCS</td>
+            <td>${formatINR(item.ptr)}/PCS</td>
+            <td>PCS</td>
+            <td>${item.discount_percent.toFixed(2)}%</td>
             <td>${formatINR(item.taxable_amount)}</td>
-            <td>${item.gst_rate}% ${formatINR(item.gst_amount)}</td>
-            <td>${formatINR(item.line_total)}</td>
         </tr>
-    `).join("") || `<tr><td colspan="8" class="empty">Select perfumes to preview the invoice.</td></tr>`;
+    `).join("") || `<tr><td colspan="9" class="empty">Select perfumes to preview the invoice.</td></tr>`;
     const extra = [
         state.customer_upi_id ? `UPI: ${state.customer_upi_id}` : "",
         state.transaction_reference ? `Ref: ${state.transaction_reference}` : "",
     ].filter(Boolean).join(" · ");
     document.getElementById("previewSheet").innerHTML = `
         <header class="sheet-head">
-            <img src="/static/images/deliora-logo.png" alt="DeLiora">
+            <img src="/static/images/deliora-logo.png" alt="Rudhi Cosmetics">
             <div>
-                <h2>${b.business_name || "DeLiora Essence by Patidar"}</h2>
+                <h2>${b.business_name || "Rudhi Cosmetics"}</h2>
                 <p>${b.address || ""}</p>
-                <p>${b.state || ""} (${b.state_code || ""})</p>
                 <p>${b.phone || ""} · ${b.email || ""} · ${b.website || ""}</p>
+                <p>GSTIN: ${b.gstin || "23EOUPP3879A1ZI"} · ${(b.state || "").trim()} (${b.state_code || ""})</p>
             </div>
             <div class="sheet-title">
                 <strong>INVOICE</strong>
@@ -283,6 +298,7 @@ function renderPreview(state) {
             <div>
                 <h3>Bill To</h3>
                 <p><strong>${state.customer_name || "Customer name"}</strong></p>
+                ${state.customer_gstin ? `<p>GSTIN: ${state.customer_gstin}</p>` : ""}
                 <p>${state.customer_phone}</p>
                 <p>${state.customer_email}</p>
                 <p>${state.customer_address}</p>
@@ -293,15 +309,15 @@ function renderPreview(state) {
                 <p>Status: ${state.payment_status}</p>
                 <p>Previous Due: ${formatINR(state.previous_due)}</p>
                 <p>${extra}</p>
-                <p>Tax: ${state.tax_type === "intra" ? "Intra-State (CGST/SGST)" : "Inter-State (IGST)"}</p>
+                <p>Tax: ${state.tax_type === "intra" ? "Intra-State (CGST 9%/SGST 9%)" : "Inter-State (IGST)"}</p>
             </div>
         </section>
         <div class="sheet-items-scroll">
             <table class="sheet-items">
                 <thead>
                     <tr>
-                        <th>Sr.</th><th>Product</th><th>Qty</th><th>Rate</th>
-                        <th>Discount</th><th>Taxable</th><th>GST</th><th>Total</th>
+                        <th>Sl. No.</th><th>Product</th><th>HSN/SAC</th><th>MRP/Marginal</th>
+                        <th>Quantity</th><th>PTR/Rate</th><th>Per</th><th>Scheme Disc. %</th><th>Amount</th>
                     </tr>
                 </thead>
                 <tbody>${itemRows}</tbody>
@@ -311,14 +327,13 @@ function renderPreview(state) {
             <div>
                 <h3>Tax Summary</h3>
                 ${taxRows}
-                <p>GSTIN: ${state.customer_gstin || b.gstin || ""}</p>
                 <p class="words">Amount in words: ${state.amount_in_words}</p>
             </div>
             <div class="sheet-totals">
                 <p><span>Subtotal</span><strong>${formatINR(state.subtotal)}</strong></p>
-                <p><span>Discount</span><strong>${formatINR(state.total_discount)}</strong></p>
+                <p><span>Round-off</span><strong>${formatINR(0)}</strong></p>
                 <p><span>Taxable Amount</span><strong>${formatINR(state.total_taxable)}</strong></p>
-                <p><span>GST</span><strong>${formatINR(state.total_gst)}</strong></p>
+                <p><span>GST (18%)</span><strong>${formatINR(state.total_gst)}</strong></p>
                 <p class="grand"><span>GRAND TOTAL</span><strong>${formatINR(state.grand_total)}</strong></p>
                 <p><span>Previous Due</span><strong>${formatINR(state.previous_due)}</strong></p>
                 <p><span>Amount Paid</span><strong>${formatINR(state.amount_paid)}</strong></p>
@@ -337,7 +352,6 @@ function recalc() {
     togglePaymentFields();
     const state = collectState();
     document.getElementById("tSubtotal").textContent = formatINR(state.subtotal);
-    document.getElementById("tDiscount").textContent = formatINR(state.total_discount);
     document.getElementById("tTaxable").textContent = formatINR(state.total_taxable);
     document.getElementById("tCgst").textContent = formatINR(state.total_cgst);
     document.getElementById("tSgst").textContent = formatINR(state.total_sgst);

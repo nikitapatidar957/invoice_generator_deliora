@@ -26,6 +26,14 @@ class CalculationTests(unittest.TestCase):
         self.assertEqual(line["cgst_amount"], 0.00)
         self.assertEqual(line["line_total"], 1473.94)
 
+    def test_scheme_discount_uses_ptr_not_mrp(self):
+        line = calculate_line(1, 1499, 35.5, 0, 18, "intra", calculation_price=984)
+        self.assertEqual(line["gross_amount"], 984.00)
+        self.assertEqual(line["discount_amount"], 349.32)
+        self.assertEqual(line["taxable_amount"], 634.68)
+        self.assertEqual(line["gst_amount"], 114.24)
+        self.assertEqual(line["line_total"], 748.92)
+
     def test_invoice_totals_and_partial_payment(self):
         items = [
             {"product_id": 1, "quantity": 2, "unit_price": 1499, "discount_percent": 0, "discount_fixed": 0, "gst_rate": 18},

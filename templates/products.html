@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Products — DeLiora{% endblock %}
+{% block title %}Products — Rudhi Cosmetics{% endblock %}
 {% block content %}
 <section class="page-head">
     <div>
         <p class="eyebrow">Catalogue</p>
         <h1>Products</h1>
-        <p class="lede">Edit prices, GST and HSN here. Inactive perfumes stay on old invoices but cannot be billed again.</p>
+        <p class="lede">Edit MRP, PTR, GST, scheme discount and HSN here. Inactive perfumes stay on old invoices but cannot be billed again.</p>
     </div>
     <button class="btn primary" id="newProduct">Add Product</button>
 </section>
@@ -18,8 +18,11 @@
                     <th>Name</th>
                     <th>SKU</th>
                     <th>Size</th>
-                    <th>Price</th>
+                    <th>MRP</th>
+                    <th>PTR %</th>
+                    <th>PTR</th>
                     <th>GST %</th>
+                    <th>Scheme Disc. %</th>
                     <th>HSN/SAC</th>
                     <th>Qty</th>
                     <th>Status</th>
@@ -33,7 +36,10 @@
                     <td><input class="sku" value="{{ p.sku }}"></td>
                     <td><input class="size" value="{{ p.size }}"></td>
                     <td><input class="price" type="number" min="0" step="0.01" value="{{ p.price }}"></td>
+                    <td><input class="ptr-percent" type="number" min="0" max="100" step="0.01" value="{{ p.get('ptr_percent', 34.36) }}"></td>
+                    <td><input class="ptr" type="number" min="0" step="0.01" value="{{ '%.2f'|format(p.get('ptr', p.price - p.price * p.get('ptr_percent', 34.36) / 100)) }}"></td>
                     <td><input class="gst" type="number" min="0" step="0.01" value="{{ p.gst_rate }}"></td>
+                    <td><input class="scheme-discount" type="number" min="0" max="100" step="0.01" value="{{ p.get('scheme_discount', 35.5) }}"></td>
                     <td><input class="hsn" value="{{ p.hsn_sac }}"></td>
                     <td><input class="qty" type="number" min="0" step="1" value="{{ p.available_quantity }}"></td>
                     <td>{{ 'Active' if p.is_active else 'Inactive' }}</td>

@@ -5,6 +5,9 @@ from config import (
     DEFAULT_GST_RATE,
     DEFAULT_HSN,
     DEFAULT_PRODUCT_PRICE,
+    DEFAULT_PTR,
+    DEFAULT_PTR_PERCENT,
+    DEFAULT_SCHEME_DISCOUNT,
     DEFAULT_SIZE,
     INVOICE_FOOTER_THANK_YOU,
     INVOICE_TAGLINE,
@@ -41,6 +44,34 @@ def seed_if_needed(database) -> None:
 
     products = database[COLLECTIONS["products"]]
     if products.count_documents({}):
+        products.update_many(
+            {"$or": [{"ptr": {"$exists": False}}, {"ptr": 1199.2}]},
+            {"$set": {"ptr": DEFAULT_PTR, "ptr_percent": DEFAULT_PTR_PERCENT, "updated_at": now}},
+        )
+        products.update_many(
+            {"ptr_percent": {"$exists": False}},
+            {"$set": {"ptr_percent": DEFAULT_PTR_PERCENT, "updated_at": now}},
+        )
+        products.update_many(
+            {"scheme_discount": {"$exists": False}},
+            {"$set": {"scheme_discount": DEFAULT_SCHEME_DISCOUNT, "updated_at": now}},
+        )
+        products.update_many(
+            {},
+            [
+                {
+                    "$set": {
+                        "ptr": {
+                            "$subtract": [
+                                "$price",
+                                {"$multiply": ["$price", {"$divide": ["$ptr_percent", 100]}]},
+                            ]
+                        },
+                        "updated_at": now,
+                    }
+                }
+            ],
+        )
         return
 
     for product in SEED_PRODUCTS:
@@ -52,6 +83,9 @@ def seed_if_needed(database) -> None:
             "sku": product["sku"],
             "size": DEFAULT_SIZE,
             "price": DEFAULT_PRODUCT_PRICE,
+            "ptr": DEFAULT_PTR,
+            "ptr_percent": DEFAULT_PTR_PERCENT,
+            "scheme_discount": DEFAULT_SCHEME_DISCOUNT,
             "gst_rate": DEFAULT_GST_RATE,
             "hsn_sac": DEFAULT_HSN,
             "available_quantity": 100,
