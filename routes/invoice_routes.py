@@ -91,8 +91,20 @@ def download_pdf(invoice_id: int):
     response = send_file(
         pdf_path,
         mimetype="application/pdf",
-        as_attachment=True,
+        as_attachment=request.args.get("inline") != "1",
         download_name=invoice_download_name(invoice),
     )
     response.call_on_close(lambda: pdf_path.unlink(missing_ok=True))
     return response
+
+
+@invoice_bp.get("/invoices/<int:invoice_id>/print")
+def print_invoice(invoice_id: int):
+    invoice = get_invoice(invoice_id)
+    if not invoice:
+        return jsonify({"error": "Invoice not found."}), 404
+    return render_template(
+        "print_invoice.html",
+        invoice=invoice,
+        pdf_url=f"/invoices/{invoice_id}/pdf?inline=1",
+    )

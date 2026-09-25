@@ -428,12 +428,35 @@ async function saveInvoice(download) {
     }, download ? 1500 : 0);
 }
 
+async function printInvoice() {
+    hideAlert();
+    const state = recalc();
+    const error = validate(state);
+    if (error) {
+        showAlert(error);
+        return;
+    }
+    const response = await fetch("/api/invoices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(state),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+        showAlert(data.error || "Could not save invoice.");
+        return;
+    }
+    window.open("/invoices/" + data.id + "/print", "_blank", "noopener");
+    showAlert("Invoice opened for printing.", true);
+}
+
 document.getElementById("addProduct").addEventListener("click", () => addRow());
 document.getElementById("invoiceForm").addEventListener("submit", (e) => {
     e.preventDefault();
     saveInvoice(true);
 });
 document.getElementById("saveOnly").addEventListener("click", () => saveInvoice(false));
+document.getElementById("printInvoice").addEventListener("click", printInvoice);
 document.getElementById("invoiceForm").addEventListener("input", recalc);
 document.getElementById("invoiceForm").addEventListener("change", recalc);
 document.querySelectorAll(".price").forEach((el) => {

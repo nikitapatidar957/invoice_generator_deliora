@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Print {{ invoice.invoice_number }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body {
+            margin: 0;
+            background: white;
+        }
+
+        .invoice-sheet {
+            max-width: none;
+            margin: 0;
+            box-shadow: none;
+        }
+
+        @media print {
+            @page {
+                size: A4;
+                margin: 8mm;
+            }
+
+            body {
+                background: white;
+            }
+
+            .invoice-sheet {
+                width: 100%;
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    {% include "_invoice_sheet.html" %}
+    <script>
+        window.addEventListener("load", () => setTimeout(() => window.print(), 300));
+    </script>
+</body>
+</html>
