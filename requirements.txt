@@ -4,3 +4,36 @@ reportlab==4.2.5
 python-dotenv==1.0.1
 pymongo==4.10.1
 certifi==2024.8.30
+
+
+mistique:-
+Top Notes: Italian Cypress, Myrtle, Rose
+Heart Notes: Sandalwood, Cedar
+Base Notes: Amber, White Musk, Brazilian Rosewood
+
+blanc :- 
+Top Notes: Bergamot, Lemon, Pink Pepper
+Heart Notes: Rose, Jasmine, Saffron
+Base Notes: White Oud (Soft Oud Accord), Sandalwood, Amber, Musk, Vanilla
+
+fleur:-
+Top Notes: Jasmine Bud
+Heart Notes: Tuberose
+Base Notes: Rangoon Creeper
+
+alpha :-
+Top Notes: Grapefruit, Lemon, Mint, Pink Pepper, Bergamot
+Heart Notes: Ginger, Nutmeg, Jasmine
+Base Notes: Incense, Cedar, Sandalwood, Patchouli, Vetiver, Labdanum, White Musk
+
+velvet :-
+Top Notes: Strawberry, Raspberry, Blackberry, Cherry, Black Currant, Mandarin Orange, Lemon
+Heart Notes: Violet, Jasmine
+Base Notes: Musk, Vanilla, Cashmeran, Oakmoss, Amber, Patchouli
+
+
+Tam dao - mistique 
+White oud - blanc 
+Burberry her - velvet 
+Blue de chanel -alpha 
+Gucci bloom - Fleur

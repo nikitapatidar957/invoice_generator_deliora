@@ -69,6 +69,7 @@
             <p class="words">Amount in words: {{ invoice.amount_in_words }}</p>
         </div>
         <div class="sheet-totals">
+            <p><span>Total Quantity</span><strong>{{ invoice.get('total_quantity', invoice['items']|sum(attribute='quantity')) }} PCS</strong></p>
             <p><span>Subtotal</span><strong>₹{{ '%.2f'|format(invoice.subtotal) }}</strong></p>
             <p><span>Round-off</span><strong>₹0.00</strong></p>
             <p><span>Taxable Amount</span><strong>₹{{ '%.2f'|format(invoice.total_taxable) }}</strong></p>

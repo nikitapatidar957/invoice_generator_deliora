@@ -191,6 +191,7 @@ function collectState() {
     const method = document.getElementById("paymentMethod").value;
     const validItems = items.filter((i) => i.product_id);
     const subtotal = money(validItems.reduce((s, i) => s + i.quantity * i.ptr, 0));
+    const totalQuantity = validItems.reduce((s, i) => s + i.quantity, 0);
     const totalDiscount = money(validItems.reduce((s, i) => s + i.discount_amount, 0));
     const totalTaxable = money(validItems.reduce((s, i) => s + i.taxable_amount, 0));
     const totalGst = money(validItems.reduce((s, i) => s + i.gst_amount, 0));
@@ -221,6 +222,7 @@ function collectState() {
         balance_due: money(previousDue + (grand - paid)),
         items: validItems,
         subtotal,
+        total_quantity: totalQuantity,
         total_discount: totalDiscount,
         total_taxable: totalTaxable,
         total_gst: totalGst,
@@ -264,8 +266,6 @@ function renderPreview(state) {
         <tr>
             <td>${i + 1}</td>
             <td>${item.product_name}</td>
-            <td>${item.quantity}</td>
-            <td>${formatINR(item.unit_price)}</td>
             <td>${item.hsn_sac}</td>
             <td>${formatINR(item.unit_price)}/PCS</td>
             <td>${item.quantity} PCS</td>
@@ -330,6 +330,7 @@ function renderPreview(state) {
                 <p class="words">Amount in words: ${state.amount_in_words}</p>
             </div>
             <div class="sheet-totals">
+                <p><span>Total Quantity</span><strong>${state.total_quantity} PCS</strong></p>
                 <p><span>Subtotal</span><strong>${formatINR(state.subtotal)}</strong></p>
                 <p><span>Round-off</span><strong>${formatINR(0)}</strong></p>
                 <p><span>Taxable Amount</span><strong>${formatINR(state.total_taxable)}</strong></p>

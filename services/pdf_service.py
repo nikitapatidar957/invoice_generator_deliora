@@ -251,7 +251,7 @@ def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Pa
 
     items_table = Table(
         rows,
-        colWidths=[10 * mm, 34 * mm, 18 * mm, 25 * mm, 18 * mm, 25 * mm, 12 * mm, 25 * mm, 25 * mm],
+        colWidths=[10 * mm, 32 * mm, 17 * mm, 23 * mm, 17 * mm, 23 * mm, 10 * mm, 24 * mm, 26 * mm],
     )
     items_table.setStyle(
         TableStyle(
@@ -283,6 +283,7 @@ def generate_invoice_pdf(invoice_id: int, output_path: Path | None = None) -> Pa
         )
 
     totals_rows = [
+        [Paragraph("Total Quantity", small), Paragraph(f"{sum(item['quantity'] for item in invoice['items'])} PCS", right)],
         [Paragraph("Subtotal", small), Paragraph(format_pdf_currency(invoice["subtotal"]), right)],
         [Paragraph("Round-off", small), Paragraph(format_pdf_currency(0), right)],
         [Paragraph("Taxable Amount", small), Paragraph(format_pdf_currency(invoice["total_taxable"]), right)],

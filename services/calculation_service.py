@@ -124,6 +124,7 @@ def calculate_invoice(
         )})
 
     subtotal = money(sum(Decimal(str(i["gross_amount"])) for i in calculated_items))
+    total_quantity = sum(i["quantity"] for i in calculated_items)
     total_discount = money(sum(Decimal(str(i["discount_amount"])) for i in calculated_items))
     total_taxable = money(sum(Decimal(str(i["taxable_amount"])) for i in calculated_items))
     total_gst = money(sum(Decimal(str(i["gst_amount"])) for i in calculated_items))
@@ -162,6 +163,7 @@ def calculate_invoice(
     return {
         "items": calculated_items,
         "subtotal": float(subtotal),
+        "total_quantity": total_quantity,
         "total_discount": float(total_discount),
         "total_taxable": float(total_taxable),
         "total_gst": float(total_gst),

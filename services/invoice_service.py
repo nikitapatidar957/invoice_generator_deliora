@@ -225,6 +225,7 @@ def create_invoice(payload: dict) -> dict:
         "previous_due": totals["previous_due"],
         "balance_due": totals["balance_due"],
         "subtotal": totals["subtotal"],
+        "total_quantity": totals["total_quantity"],
         "total_discount": totals["total_discount"],
         "total_taxable": totals["total_taxable"],
         "total_gst": totals["total_gst"],
